@@ -16,7 +16,7 @@ function AccessPage() {
         <div className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
           <h3 className="text-sm font-semibold text-fg">How to use on other computers</h3>
           <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-xs leading-relaxed">
-            <li>Copy the team link above (or use your published production URL).</li>
+            <li>Copy the team link above (or your published production URL).</li>
             <li>Open it in Chrome, Edge, or Safari on any laptop, shop PC, or phone.</li>
             <li>
               Everyone sees the same projects, drawings, fab, RFIs, and calendar
@@ -27,6 +27,18 @@ function AccessPage() {
               machine if needed.
             </li>
           </ol>
+          <p className="mt-3 text-xs">
+            Source / deploy from GitHub:{" "}
+            <a
+              className="font-medium text-primary hover:underline"
+              href="https://github.com/lorteezy87/steel-pm-tracker"
+              target="_blank"
+              rel="noreferrer"
+            >
+              github.com/lorteezy87/steel-pm-tracker
+            </a>
+            . Import that repo into Vercel and set a Postgres <code className="text-fg">DATABASE_URL</code> for durable multi-device sync.
+          </p>
         </div>
       </div>
     </AppShell>

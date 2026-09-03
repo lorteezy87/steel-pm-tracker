@@ -22,7 +22,9 @@ import { Route as Lookahead10dRouteImport } from './routes/lookahead-10d'
 import { Route as Lookahead48hRouteImport } from './routes/lookahead-48h'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as RfisRouteImport } from './routes/rfis'
+import { Route as RoadblocksRouteImport } from './routes/roadblocks'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as WorkPackagesRouteImport } from './routes/work-packages'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPmWorkspaceRouteImport } from './routes/api/pm/workspace'
 
@@ -91,9 +93,19 @@ const RfisRoute = RfisRouteImport.update({
   path: '/rfis',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoadblocksRoute = RoadblocksRouteImport.update({
+  id: '/roadblocks',
+  path: '/roadblocks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkPackagesRoute = WorkPackagesRouteImport.update({
+  id: '/work-packages',
+  path: '/work-packages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -121,7 +133,9 @@ export interface FileRoutesByFullPath {
   '/lookahead-48h': typeof Lookahead48hRoute
   '/projects': typeof ProjectsRoute
   '/rfis': typeof RfisRoute
+  '/roadblocks': typeof RoadblocksRoute
   '/tasks': typeof TasksRoute
+  '/work-packages': typeof WorkPackagesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/pm/workspace': typeof ApiPmWorkspaceRoute
 }
@@ -139,7 +153,9 @@ export interface FileRoutesByTo {
   '/lookahead-48h': typeof Lookahead48hRoute
   '/projects': typeof ProjectsRoute
   '/rfis': typeof RfisRoute
+  '/roadblocks': typeof RoadblocksRoute
   '/tasks': typeof TasksRoute
+  '/work-packages': typeof WorkPackagesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/pm/workspace': typeof ApiPmWorkspaceRoute
 }
@@ -158,7 +174,9 @@ export interface FileRoutesById {
   '/lookahead-48h': typeof Lookahead48hRoute
   '/projects': typeof ProjectsRoute
   '/rfis': typeof RfisRoute
+  '/roadblocks': typeof RoadblocksRoute
   '/tasks': typeof TasksRoute
+  '/work-packages': typeof WorkPackagesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/pm/workspace': typeof ApiPmWorkspaceRoute
 }
@@ -178,7 +196,9 @@ export interface FileRouteTypes {
     | '/lookahead-48h'
     | '/projects'
     | '/rfis'
+    | '/roadblocks'
     | '/tasks'
+    | '/work-packages'
     | '/api/auth/$'
     | '/api/pm/workspace'
   fileRoutesByTo: FileRoutesByTo
@@ -196,7 +216,9 @@ export interface FileRouteTypes {
     | '/lookahead-48h'
     | '/projects'
     | '/rfis'
+    | '/roadblocks'
     | '/tasks'
+    | '/work-packages'
     | '/api/auth/$'
     | '/api/pm/workspace'
   id:
@@ -214,7 +236,9 @@ export interface FileRouteTypes {
     | '/lookahead-48h'
     | '/projects'
     | '/rfis'
+    | '/roadblocks'
     | '/tasks'
+    | '/work-packages'
     | '/api/auth/$'
     | '/api/pm/workspace'
   fileRoutesById: FileRoutesById
@@ -233,7 +257,9 @@ export interface RootRouteChildren {
   Lookahead48hRoute: typeof Lookahead48hRoute
   ProjectsRoute: typeof ProjectsRoute
   RfisRoute: typeof RfisRoute
+  RoadblocksRoute: typeof RoadblocksRoute
   TasksRoute: typeof TasksRoute
+  WorkPackagesRoute: typeof WorkPackagesRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPmWorkspaceRoute: typeof ApiPmWorkspaceRoute
 }
@@ -331,11 +357,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RfisRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/roadblocks': {
+      id: '/roadblocks'
+      path: '/roadblocks'
+      fullPath: '/roadblocks'
+      preLoaderRoute: typeof RoadblocksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks': {
       id: '/tasks'
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/work-packages': {
+      id: '/work-packages'
+      path: '/work-packages'
+      fullPath: '/work-packages'
+      preLoaderRoute: typeof WorkPackagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -369,7 +409,9 @@ const rootRouteChildren: RootRouteChildren = {
   Lookahead48hRoute: Lookahead48hRoute,
   ProjectsRoute: ProjectsRoute,
   RfisRoute: RfisRoute,
+  RoadblocksRoute: RoadblocksRoute,
   TasksRoute: TasksRoute,
+  WorkPackagesRoute: WorkPackagesRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPmWorkspaceRoute: ApiPmWorkspaceRoute,
 }

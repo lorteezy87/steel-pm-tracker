@@ -11,7 +11,9 @@ import {
   SEED_INSTALL,
   SEED_PROJECTS,
   SEED_RFIS,
+  SEED_ROADBLOCKS,
   SEED_TASKS,
+  SEED_WORK_PACKAGES,
 } from "./seed";
 import type {
   ChangeOrder,
@@ -25,8 +27,10 @@ import type {
   Priority,
   Project,
   Rfi,
+  Roadblock,
   Task,
   TrackerName,
+  WorkPackage,
 } from "./types";
 
 /** Fixed "today" for demo lookaheads so sample dates stay relevant (2026-08-03). */
@@ -44,6 +48,7 @@ function priorityRank(p: Priority): number {
 
 interface PmState {
   projects: Project[];
+  workPackages: WorkPackage[];
   drawingSets: DrawingSet[];
   drawingSheets: DrawingSheet[];
   fab: FabItem[];
@@ -51,6 +56,7 @@ interface PmState {
   install: InstallItem[];
   rfis: Rfi[];
   cos: ChangeOrder[];
+  roadblocks: Roadblock[];
   tasks: Task[];
   filterProjectId: string | "all";
   setFilterProjectId: (id: string | "all") => void;
@@ -58,6 +64,10 @@ interface PmState {
   addProject: (row: Omit<Project, "id">) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
   deleteProject: (id: string) => void;
+
+  addWorkPackage: (row: Omit<WorkPackage, "id">) => string;
+  updateWorkPackage: (id: string, patch: Partial<WorkPackage>) => void;
+  deleteWorkPackage: (id: string) => void;
 
   addDrawingSet: (row: Omit<DrawingSet, "id">) => string;
   updateDrawingSet: (id: string, patch: Partial<DrawingSet>) => void;
@@ -91,11 +101,16 @@ interface PmState {
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
 
+  addRoadblock: (row: Omit<Roadblock, "id">) => string;
+  updateRoadblock: (id: string, patch: Partial<Roadblock>) => void;
+  deleteRoadblock: (id: string) => void;
+
   resetSeed: () => void;
 }
 
 const initial = {
   projects: SEED_PROJECTS,
+  workPackages: SEED_WORK_PACKAGES,
   drawingSets: SEED_DRAWING_SETS,
   drawingSheets: SEED_DRAWING_SHEETS,
   fab: SEED_FAB,
@@ -103,6 +118,7 @@ const initial = {
   install: SEED_INSTALL,
   rfis: SEED_RFIS,
   cos: SEED_COS,
+  roadblocks: SEED_ROADBLOCKS,
   tasks: SEED_TASKS,
   filterProjectId: "all" as const,
 };
@@ -125,6 +141,7 @@ export const usePmStore = create<PmState>()(
       deleteProject: (id) =>
         set((s) => ({
           projects: s.projects.filter((r) => r.id !== id),
+          workPackages: s.workPackages.filter((r) => r.projectId !== id),
           drawingSets: s.drawingSets.filter((r) => r.projectId !== id),
           drawingSheets: s.drawingSheets.filter((sh) => {
             const set = s.drawingSets.find((ds) => ds.id === sh.setId);
@@ -135,8 +152,30 @@ export const usePmStore = create<PmState>()(
           install: s.install.filter((r) => r.projectId !== id),
           rfis: s.rfis.filter((r) => r.projectId !== id),
           cos: s.cos.filter((r) => r.projectId !== id),
+          roadblocks: s.roadblocks.filter((r) => r.projectId !== id),
           tasks: s.tasks.filter((r) => r.projectId !== id),
           filterProjectId: s.filterProjectId === id ? "all" : s.filterProjectId,
+        })),
+
+      addWorkPackage: (row) => {
+        const id = newId("wp");
+        set((s) => ({ workPackages: [...s.workPackages, { ...row, id }] }));
+        return id;
+      },
+      updateWorkPackage: (id, patch) =>
+        set((s) => ({
+          workPackages: s.workPackages.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        })),
+      deleteWorkPackage: (id) =>
+        set((s) => ({
+          workPackages: s.workPackages.filter((r) => r.id !== id),
+          fab: s.fab.map((r) => (r.workPackageId === id ? { ...r, workPackageId: undefined } : r)),
+          deliveries: s.deliveries.map((r) =>
+            r.workPackageId === id ? { ...r, workPackageId: undefined } : r,
+          ),
+          install: s.install.map((r) =>
+            r.workPackageId === id ? { ...r, workPackageId: undefined } : r,
+          ),
         })),
 
       addDrawingSet: (row) => {
@@ -238,9 +277,21 @@ export const usePmStore = create<PmState>()(
         })),
       deleteTask: (id) => set((s) => ({ tasks: s.tasks.filter((r) => r.id !== id) })),
 
+      addRoadblock: (row) => {
+        const id = newId("rb");
+        set((s) => ({ roadblocks: [...s.roadblocks, { ...row, id }] }));
+        return id;
+      },
+      updateRoadblock: (id, patch) =>
+        set((s) => ({
+          roadblocks: s.roadblocks.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        })),
+      deleteRoadblock: (id) =>
+        set((s) => ({ roadblocks: s.roadblocks.filter((r) => r.id !== id) })),
+
       resetSeed: () => set({ ...initial }),
     }),
-    { name: "steel-pm-tracker-v5" },
+    { name: "steel-pm-tracker-v6" },
   ),
 );
 
@@ -250,6 +301,7 @@ export function projectCode(projects: Project[], id: string): string {
 
 export function computeKpis(state: {
   projects: Project[];
+  workPackages: WorkPackage[];
   drawingSets: DrawingSet[];
   drawingSheets: DrawingSheet[];
   fab: FabItem[];
@@ -257,6 +309,7 @@ export function computeKpis(state: {
   install: InstallItem[];
   rfis: Rfi[];
   cos: ChangeOrder[];
+  roadblocks: Roadblock[];
   tasks: Task[];
 }): KpiSnapshot {
   const today = DEMO_TODAY;
@@ -300,6 +353,11 @@ export function computeKpis(state: {
     .filter((c) => ["Draft", "Submitted", "Under Review"].includes(c.status))
     .reduce((a, c) => a + c.cost, 0);
 
+  const openRoadblocks = state.roadblocks.filter((r) => r.status === "Open").length;
+  const overdueRoadblocks = state.roadblocks.filter(
+    (r) => r.status === "Open" && r.resolvedDate && r.resolvedDate < today,
+  ).length;
+
   const la = buildLookahead(state, end10);
   const due48h = la.filter((i) => i.due <= end48 && !isDoneStatus(i.status)).length;
   const due10d = la.filter((i) => !isDoneStatus(i.status)).length;
@@ -315,12 +373,15 @@ export function computeKpis(state: {
     pendingCoValue,
     due48h,
     due10d,
+    openRoadblocks,
+    overdueRoadblocks,
   };
 }
 
 export function buildLookahead(
   state: {
     projects: Project[];
+    workPackages: WorkPackage[];
     drawingSets: DrawingSet[];
     drawingSheets: DrawingSheet[];
     fab: FabItem[];
@@ -328,6 +389,7 @@ export function buildLookahead(
     install: InstallItem[];
     rfis: Rfi[];
     cos: ChangeOrder[];
+    roadblocks: Roadblock[];
     tasks: Task[];
   },
   until: string,
@@ -452,6 +514,46 @@ export function buildLookahead(
       action: "Complete task",
       entityType: "task",
       entityId: t.id,
+    });
+  }
+
+  for (const wp of state.workPackages) {
+    const dueDate = wp.plannedComplete || wp.plannedStart;
+    if (!dueDate || dueDate > until) continue;
+    items.push({
+      projectCode: code(wp.projectId),
+      tracker: "Work Packages",
+      id: wp.code,
+      description: `${wp.name || wp.description} · ${wp.tonnage}t`,
+      owner: wp.owner,
+      due: dueDate,
+      status: wp.status,
+      priority: dueDate < today ? "High" : "Med",
+      action: wp.plannedComplete && wp.plannedComplete <= until ? "Confirm complete" : "Confirm start",
+      entityType: "workPackage",
+      entityId: wp.id,
+    });
+  }
+
+  // Roadblocks have no hard due date by nature — use resolvedDate as a target
+  // when set, otherwise still surface every OPEN roadblock as needing
+  // attention (flagged "no target date") since they block other work.
+  for (const rb of state.roadblocks) {
+    if (rb.status !== "Open") continue;
+    const hasTarget = Boolean(rb.resolvedDate);
+    if (hasTarget && rb.resolvedDate > until) continue;
+    items.push({
+      projectCode: code(rb.projectId),
+      tracker: "Roadblocks",
+      id: rb.title,
+      description: hasTarget ? rb.description : `${rb.description} · no target date`,
+      owner: rb.ballInCourt || rb.owner,
+      due: hasTarget ? rb.resolvedDate : today,
+      status: rb.status,
+      priority: rb.severity,
+      action: "Clear roadblock",
+      entityType: "roadblock",
+      entityId: rb.id,
     });
   }
 

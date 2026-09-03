@@ -61,6 +61,7 @@ export function snapshotFromStore(): PmSnapshot {
   const s = usePmStore.getState();
   return {
     projects: s.projects,
+    workPackages: s.workPackages,
     drawingSets: s.drawingSets,
     drawingSheets: s.drawingSheets,
     fab: s.fab,
@@ -68,6 +69,7 @@ export function snapshotFromStore(): PmSnapshot {
     install: s.install,
     rfis: s.rfis,
     cos: s.cos,
+    roadblocks: s.roadblocks,
     tasks: s.tasks,
   };
 }
@@ -76,6 +78,7 @@ export function applySnapshot(data: PmSnapshot) {
   suppressPush = true;
   usePmStore.setState({
     projects: data.projects,
+    workPackages: data.workPackages ?? [],
     drawingSets: data.drawingSets,
     drawingSheets: data.drawingSheets,
     fab: data.fab,
@@ -83,6 +86,7 @@ export function applySnapshot(data: PmSnapshot) {
     install: data.install,
     rfis: data.rfis,
     cos: data.cos,
+    roadblocks: data.roadblocks ?? [],
     tasks: data.tasks,
   });
   queueMicrotask(() => {
@@ -121,29 +125,26 @@ export async function pushWorkspace(force = false): Promise<boolean> {
   setStatus("saving");
   try {
     const data = snapshotFromStore();
+    // Every write requires a signed-in session (see routes/api/pm/workspace.ts).
+    // The live preview's iframe has partitioned cookies, so forward the bearer
+    // token the same way `authMiddleware` does for server functions.
+    const { getBearerToken } = await import("@/lib/auth/client");
+    const bearer = getBearerToken();
     const res = await fetch("/api/pm/workspace", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        data,
-        expectedVersion: force ? undefined : serverVersion || undefined,
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+      },
+      body: JSON.stringify({ data }),
     });
 
-    if (res.status === 409) {
-      const conflict = (await res.json()) as {
-        data?: PmSnapshot;
-        version?: number;
-      };
-      if (conflict.data && isPmSnapshot(conflict.data)) {
-        serverVersion = conflict.version || serverVersion;
-        emit();
-        applySnapshot(conflict.data);
-      } else {
-        await pullWorkspace();
-      }
-      setStatus("synced");
-      return true;
+    if (res.status === 401) {
+      // Not signed in — the shared workspace now requires a session to write.
+      // Keep local edits (Zustand persist) and surface as offline rather than
+      // silently discarding them.
+      setStatus("offline", "Sign in to sync changes to the team");
+      return false;
     }
 
     if (!res.ok) throw new Error(`Save failed (${res.status})`);
@@ -177,6 +178,7 @@ export function startPmSync() {
     if (suppressPush) return;
     const keys = [
       "projects",
+      "workPackages",
       "drawingSets",
       "drawingSheets",
       "fab",
@@ -184,6 +186,7 @@ export function startPmSync() {
       "install",
       "rfis",
       "cos",
+      "roadblocks",
       "tasks",
     ] as const;
     const changed = keys.some((k) => state[k] !== prev[k]);

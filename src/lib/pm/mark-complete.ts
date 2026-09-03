@@ -16,6 +16,8 @@ export function markEntityComplete(
     | "updateTask"
     | "updateCo"
     | "updateProject"
+    | "updateWorkPackage"
+    | "updateRoadblock"
   >,
   entityType: LookaheadEntityType | "changeOrder" | "project",
   entityId: string,
@@ -48,6 +50,12 @@ export function markEntityComplete(
     case "project":
       store.updateProject(entityId, { status: "Complete" });
       break;
+    case "workPackage":
+      store.updateWorkPackage(entityId, { status: "Complete" });
+      break;
+    case "roadblock":
+      store.updateRoadblock(entityId, { status: "Resolved" });
+      break;
   }
 }
 
@@ -63,6 +71,8 @@ export function reopenEntity(
     | "updateTask"
     | "updateCo"
     | "updateProject"
+    | "updateWorkPackage"
+    | "updateRoadblock"
   >,
   entityType: LookaheadEntityType | "changeOrder" | "project",
   entityId: string,
@@ -94,6 +104,12 @@ export function reopenEntity(
       break;
     case "project":
       store.updateProject(entityId, { status: "Active" });
+      break;
+    case "workPackage":
+      store.updateWorkPackage(entityId, { status: "In Fabrication" });
+      break;
+    case "roadblock":
+      store.updateRoadblock(entityId, { status: "Open" });
       break;
   }
 }

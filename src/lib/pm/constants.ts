@@ -7,7 +7,11 @@ import type {
   Priority,
   ProjectStatus,
   RfiStatus,
+  RoadblockCategory,
+  RoadblockImpact,
+  RoadblockStatus,
   TaskStatus,
+  WorkPackageStatus,
 } from "./types";
 
 export const PROJECT_STATUSES: ProjectStatus[] = [
@@ -74,6 +78,38 @@ export const TASK_STATUSES: TaskStatus[] = [
 
 export const PRIORITIES: Priority[] = ["High", "Med", "Low"];
 
+export const WORK_PACKAGE_STATUSES: WorkPackageStatus[] = [
+  "Planned",
+  "Released",
+  "In Fabrication",
+  "Ready to Ship",
+  "Shipped",
+  "Erected",
+  "Complete",
+];
+
+export const ROADBLOCK_CATEGORIES: RoadblockCategory[] = [
+  "Drawings",
+  "Fabrication",
+  "Delivery",
+  "Installation",
+  "RFI",
+  "ChangeOrder",
+  "Procurement",
+  "Safety",
+  "Other",
+];
+
+export const ROADBLOCK_IMPACTS: RoadblockImpact[] = [
+  "Schedule",
+  "Cost",
+  "Safety",
+  "Quality",
+  "Other",
+];
+
+export const ROADBLOCK_STATUSES: RoadblockStatus[] = ["Open", "Resolved"];
+
 /** Status → semantic color class tokens */
 export function statusTone(status: string): "gray" | "blue" | "yellow" | "green" | "red" {
   const s = status.toLowerCase();
@@ -97,7 +133,9 @@ export function statusTone(status: string): "gray" | "blue" | "yellow" | "green"
     s === "verified" ||
     s === "delivered" ||
     s === "implemented" ||
-    s === "ready to ship"
+    s === "ready to ship" ||
+    s === "resolved" ||
+    s === "erected"
   )
     return "green";
   if (
@@ -105,16 +143,20 @@ export function statusTone(status: string): "gray" | "blue" | "yellow" | "green"
     s === "review" ||
     s === "submitted" ||
     s === "draft" ||
-    s === "qc"
+    s === "qc" ||
+    s === "in fabrication" ||
+    s === "shipped"
   )
     return "yellow";
   if (
     s === "not started" ||
     s === "not submitted" ||
     s === "on hold" ||
-    s === "released"
+    s === "released" ||
+    s === "planned"
   )
     return "gray";
+  if (s === "open") return "red";
   return "blue";
 }
 
@@ -130,12 +172,14 @@ export const NAV_ITEMS = [
   { to: "/", label: "KPI Board", icon: "LayoutDashboard" as const },
   { to: "/calendar", label: "Calendar", icon: "CalendarRange" as const },
   { to: "/projects", label: "Projects", icon: "Building2" as const },
+  { to: "/work-packages", label: "Work Packages", icon: "PackageSearch" as const },
   { to: "/drawings", label: "Drawings", icon: "FileStack" as const },
   { to: "/fabrication", label: "Fabrication", icon: "Hammer" as const },
   { to: "/delivery", label: "Delivery", icon: "Truck" as const },
   { to: "/installation", label: "Installation", icon: "HardHat" as const },
   { to: "/rfis", label: "RFIs", icon: "MessageSquareWarning" as const },
   { to: "/changes", label: "Change Orders", icon: "FilePenLine" as const },
+  { to: "/roadblocks", label: "Roadblocks", icon: "AlertTriangle" as const },
   { to: "/tasks", label: "Tasks", icon: "ListTodo" as const },
   { to: "/lookahead-48h", label: "48h Lookahead", icon: "Clock" as const },
   { to: "/lookahead-10d", label: "10d Lookahead", icon: "CalendarDays" as const },

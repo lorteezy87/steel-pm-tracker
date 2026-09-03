@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { CompleteCheck, ShowCompletedToggle } from "@/components/complete-check";
 import { ConfirmDelete, CrudDialog, type FormFieldDef } from "@/components/crud-dialog";
 import { DataTable, Td, Th } from "@/components/data-table";
-import { defaultProjectId, projectField } from "@/components/project-select-field";
+import { defaultProjectId, projectField, workPackageField } from "@/components/project-select-field";
 import { ProjectFilter } from "@/components/project-filter";
 import { AddButton, RowActions } from "@/components/row-actions";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/fabrication")({ component: FabPage });
 
 function FabPage() {
   const projects = usePmStore((s) => s.projects);
+  const workPackages = usePmStore((s) => s.workPackages);
   const fab = usePmStore((s) => s.fab);
   const filter = usePmStore((s) => s.filterProjectId);
   const add = usePmStore((s) => s.addFab);
@@ -35,7 +36,8 @@ function FabPage() {
   const fields: FormFieldDef[] = useMemo(
     () => [
       projectField(projects),
-      { key: "workPackage", label: "Work package", type: "text", required: true, placeholder: "WP-01 Columns" },
+      { key: "workPackage", label: "Work package label", type: "text", required: true, placeholder: "WP-01 Columns" },
+      workPackageField(workPackages),
       { key: "description", label: "Description", type: "text" },
       { key: "qty", label: "Qty", type: "number" },
       { key: "weightTons", label: "Weight (tons)", type: "number" },
@@ -47,7 +49,7 @@ function FabPage() {
       { key: "owner", label: "Owner", type: "text" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
-    [projects],
+    [projects, workPackages],
   );
 
   const initial = useMemo(() => {
@@ -55,6 +57,7 @@ function FabPage() {
     return {
       projectId: defaultProjectId(projects, filter),
       workPackage: "",
+      workPackageId: "",
       description: "",
       qty: 0,
       weightTons: 0,
@@ -165,6 +168,7 @@ function FabPage() {
           const row = {
             projectId: String(v.projectId),
             workPackage: String(v.workPackage),
+            workPackageId: v.workPackageId ? String(v.workPackageId) : undefined,
             description: String(v.description),
             qty: Number(v.qty) || 0,
             weightTons: Number(v.weightTons) || 0,

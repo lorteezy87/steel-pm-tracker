@@ -7,6 +7,7 @@ import {
   HardHat,
   Hammer,
   MessageSquareWarning,
+  ShieldAlert,
   Truck,
 } from "lucide-react";
 import type { KpiSnapshot } from "@/lib/pm/types";
@@ -78,6 +79,14 @@ const CARDS: {
     icon: CalendarClock,
     href: "/lookahead-48h",
     format: (k) => `${k.due48h} / ${k.due10d}`,
+  },
+  {
+    key: "openRoadblocks",
+    label: "Open Roadblocks (overdue)",
+    icon: ShieldAlert,
+    href: "/roadblocks",
+    format: (k) => `${k.openRoadblocks} (${k.overdueRoadblocks})`,
+    warn: (k) => k.overdueRoadblocks > 0,
   },
 ];
 

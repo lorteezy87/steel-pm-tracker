@@ -12,7 +12,8 @@ export function isDoneStatus(status: string): boolean {
     s === "delivered" ||
     s === "implemented" ||
     s === "ready to ship" ||
-    s === "cancelled"
+    s === "cancelled" ||
+    s === "resolved"
   );
 }
 

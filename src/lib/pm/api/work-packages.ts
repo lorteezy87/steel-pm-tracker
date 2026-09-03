@@ -3,25 +3,8 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { ensureDbReady } from "@/lib/db";
 import { newId } from "@/lib/pm/id";
 import type { WorkPackage } from "@/lib/pm/types";
-import { createEntity, deleteEntity, listEntities, updateEntity, type EntityTable } from "./entity-crud";
-
-const TABLE: EntityTable<WorkPackage> = {
-  table: "work_packages",
-  columns: {
-    id: "id",
-    projectId: "project_id",
-    code: "code",
-    name: "name",
-    description: "description",
-    status: "status",
-    plannedStart: "planned_start",
-    plannedComplete: "planned_complete",
-    tonnage: "tonnage",
-    owner: "owner",
-    notes: "notes",
-  },
-  numericKeys: ["tonnage"],
-};
+import { WORK_PACKAGES as TABLE } from "./work-packages.table";
+import { createEntity, deleteEntity, listEntities, updateEntity } from "./entity-crud";
 
 export const listWorkPackages = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -32,11 +15,16 @@ export const listWorkPackages = createServerFn({ method: "GET" })
 
 export const createWorkPackage = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((row: Omit<WorkPackage, "id">) => row)
+  .validator((row: Omit<WorkPackage, "id"> & { id?: string }) => row)
   .handler(async ({ data, context }) => {
     await ensureDbReady();
-    const id = newId("wp");
-    return createEntity(TABLE, id, data, context.userId);
+    // Prefer the client-generated id (see src/lib/pm/id.ts's newId()) so the
+    // optimistic row Zustand inserts immediately keeps the SAME id once the
+    // server confirms it — no swap-the-temp-id reconciliation needed. Falls
+    // back to generating one server-side for any caller that omits it.
+    const { id: clientId, ...row } = data;
+    const id = clientId ?? newId("wp");
+    return createEntity(TABLE, id, row, context.userId);
   });
 
 export const updateWorkPackage = createServerFn({ method: "POST" })

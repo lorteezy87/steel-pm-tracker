@@ -3,28 +3,8 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { ensureDbReady } from "@/lib/db";
 import { newId } from "@/lib/pm/id";
 import type { Roadblock } from "@/lib/pm/types";
-import { createEntity, deleteEntity, listEntities, updateEntity, type EntityTable } from "./entity-crud";
-
-const TABLE: EntityTable<Roadblock> = {
-  table: "roadblocks",
-  columns: {
-    id: "id",
-    projectId: "project_id",
-    title: "title",
-    category: "category",
-    description: "description",
-    raisedDate: "raised_date",
-    ballInCourt: "ball_in_court",
-    impact: "impact",
-    severity: "severity",
-    status: "status",
-    resolvedDate: "resolved_date",
-    linkedEntityType: "linked_entity_type",
-    linkedEntityId: "linked_entity_id",
-    owner: "owner",
-    notes: "notes",
-  },
-};
+import { ROADBLOCKS as TABLE } from "./roadblocks.table";
+import { createEntity, deleteEntity, listEntities, updateEntity } from "./entity-crud";
 
 export const listRoadblocks = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -35,11 +15,16 @@ export const listRoadblocks = createServerFn({ method: "GET" })
 
 export const createRoadblock = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((row: Omit<Roadblock, "id">) => row)
+  .validator((row: Omit<Roadblock, "id"> & { id?: string }) => row)
   .handler(async ({ data, context }) => {
     await ensureDbReady();
-    const id = newId("rb");
-    return createEntity(TABLE, id, data, context.userId);
+    // Prefer the client-generated id (see src/lib/pm/id.ts's newId()) so the
+    // optimistic row Zustand inserts immediately keeps the SAME id once the
+    // server confirms it — no swap-the-temp-id reconciliation needed. Falls
+    // back to generating one server-side for any caller that omits it.
+    const { id: clientId, ...row } = data;
+    const id = clientId ?? newId("rb");
+    return createEntity(TABLE, id, row, context.userId);
   });
 
 export const updateRoadblock = createServerFn({ method: "POST" })

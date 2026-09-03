@@ -3,22 +3,8 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { ensureDbReady } from "@/lib/db";
 import { newId } from "@/lib/pm/id";
 import type { Project } from "@/lib/pm/types";
-import { createEntity, deleteEntity, listEntities, updateEntity, type EntityTable } from "./entity-crud";
-
-const TABLE: EntityTable<Project> = {
-  table: "projects",
-  columns: {
-    id: "id",
-    code: "code",
-    name: "name",
-    client: "client",
-    status: "status",
-    startDate: "start_date",
-    targetComplete: "target_complete",
-    owner: "owner",
-    notes: "notes",
-  },
-};
+import { PROJECTS as TABLE } from "./projects.table";
+import { createEntity, deleteEntity, listEntities, updateEntity } from "./entity-crud";
 
 export const listProjects = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -29,11 +15,16 @@ export const listProjects = createServerFn({ method: "GET" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((row: Omit<Project, "id">) => row)
+  .validator((row: Omit<Project, "id"> & { id?: string }) => row)
   .handler(async ({ data, context }) => {
     await ensureDbReady();
-    const id = newId("p");
-    return createEntity(TABLE, id, data, context.userId);
+    // Prefer the client-generated id (see src/lib/pm/id.ts's newId()) so the
+    // optimistic row Zustand inserts immediately keeps the SAME id once the
+    // server confirms it — no swap-the-temp-id reconciliation needed. Falls
+    // back to generating one server-side for any caller that omits it.
+    const { id: clientId, ...row } = data;
+    const id = clientId ?? newId("p");
+    return createEntity(TABLE, id, row, context.userId);
   });
 
 export const updateProjectRow = createServerFn({ method: "POST" })

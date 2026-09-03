@@ -2,6 +2,22 @@ import type { PmSnapshot, WorkspaceResponse } from "./snapshot";
 import { isPmSnapshot } from "./snapshot";
 import { usePmStore } from "./store";
 
+/**
+ * Multi-device freshness + status reporting.
+ *
+ * IMPORTANT: this module is READ-ONLY against the server. Every write goes
+ * through the per-record `src/lib/pm/api/*` server functions, called directly
+ * from the matching `usePmStore` action (see `store.ts`) at the moment of the
+ * edit — never a debounced whole-snapshot PUT. `pullWorkspace` (GET) is safe
+ * to apply wholesale on a timer because it reflects the CURRENT authoritative
+ * server state; overwriting the local Zustand cache with it just picks up
+ * every other user's per-record edits since the last poll. This is the fix
+ * for the earlier version of this file, which used to debounce a whole-blob
+ * PUT (delete + reinsert every table) 700ms after ANY local change — that
+ * silently clobbered concurrent edits from other users and wasn't "real"
+ * per-record persistence at the application layer.
+ */
+
 export type SyncStatus =
   | "idle"
   | "loading"
@@ -10,28 +26,22 @@ export type SyncStatus =
   | "offline"
   | "error";
 
-let serverVersion = 0;
 let syncStatus: SyncStatus = "idle";
 let lastError: string | null = null;
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let started = false;
-let suppressPush = false;
+/** True whenever an optimistic mutation is in flight, from `client-mutations.ts`. */
+let pendingMutations = 0;
 const listeners = new Set<() => void>();
 
 /** Cached snapshot for useSyncExternalStore (must be referentially stable). */
 let metaSnapshot = {
-  serverVersion: 0,
   syncStatus: "idle" as SyncStatus,
   lastError: null as string | null,
 };
 
 function refreshMetaSnapshot() {
-  metaSnapshot = {
-    serverVersion,
-    syncStatus,
-    lastError,
-  };
+  metaSnapshot = { syncStatus, lastError };
 }
 
 export function getSyncMeta() {
@@ -50,11 +60,20 @@ function emit() {
   for (const l of listeners) l();
 }
 
-function setStatus(s: SyncStatus, err: string | null = null) {
+/** Exported so `client-mutations.ts` can drive the same status chip per-record edits use. */
+export function setStatus(s: SyncStatus, err: string | null = null) {
   if (syncStatus === s && lastError === err) return;
   syncStatus = s;
   lastError = err;
   emit();
+}
+
+/** Track in-flight per-record mutations so the poll loop doesn't race a save. */
+export function beginMutation(): void {
+  pendingMutations += 1;
+}
+export function endMutation(): void {
+  pendingMutations = Math.max(0, pendingMutations - 1);
 }
 
 export function snapshotFromStore(): PmSnapshot {
@@ -74,8 +93,8 @@ export function snapshotFromStore(): PmSnapshot {
   };
 }
 
+/** Replace local state with the server's current truth (safe: GET is read-only). */
 export function applySnapshot(data: PmSnapshot) {
-  suppressPush = true;
   usePmStore.setState({
     projects: data.projects,
     workPackages: data.workPackages ?? [],
@@ -89,28 +108,30 @@ export function applySnapshot(data: PmSnapshot) {
     roadblocks: data.roadblocks ?? [],
     tasks: data.tasks,
   });
-  queueMicrotask(() => {
-    suppressPush = false;
-  });
 }
 
+async function authHeaders(): Promise<Record<string, string>> {
+  // The live preview's iframe has partitioned cookies, so forward the session
+  // bearer token the same way `authMiddleware` does for server functions.
+  const { getBearerToken } = await import("@/lib/auth/client");
+  const bearer = getBearerToken();
+  return bearer ? { Authorization: `Bearer ${bearer}` } : {};
+}
+
+/** Load every table's current contents from the server (GET is read-only, never writes). */
 export async function pullWorkspace(): Promise<boolean> {
   setStatus("loading");
   try {
     const res = await fetch("/api/pm/workspace", { cache: "no-store" });
     if (!res.ok) throw new Error(`Load failed (${res.status})`);
     const body = (await res.json()) as WorkspaceResponse;
-    if (body.version !== serverVersion) {
-      serverVersion = body.version || 0;
-      emit();
-    } else {
-      serverVersion = body.version || 0;
-    }
     if (body.data && isPmSnapshot(body.data)) {
       applySnapshot(body.data);
-    } else if ((body.version || 0) === 0) {
-      await pushWorkspace(true);
-      return true;
+    } else if (body.source === "empty") {
+      // Nothing on the server yet — see if this browser has a locally
+      // persisted snapshot worth offering to import (one-time, additive
+      // only; see `maybeOfferLocalImport` / `importSnapshotJson` below).
+      await maybeOfferLocalImport();
     }
     setStatus("synced");
     return true;
@@ -120,89 +141,67 @@ export async function pullWorkspace(): Promise<boolean> {
   }
 }
 
-export async function pushWorkspace(force = false): Promise<boolean> {
-  if (suppressPush && !force) return false;
+/**
+ * One-time bootstrap: if the server has NO rows yet in a given table and this
+ * browser's local (Zustand-persisted) state has some, offer them up via the
+ * additive import endpoint. Only ever fires when the server snapshot comes
+ * back empty on first load, so it can never clobber other users' data — see
+ * `src/lib/pm/api/import.ts` for the gap-filling (never-delete) server logic.
+ */
+async function maybeOfferLocalImport(): Promise<void> {
+  const local = snapshotFromStore();
+  const hasLocalData = Object.values(local).some((rows) => Array.isArray(rows) && rows.length > 0);
+  if (!hasLocalData) return;
+  await importWorkspaceSnapshot(local);
+}
+
+/**
+ * Send a snapshot to the one-time import endpoint, which INSERTS any row
+ * whose id doesn't already exist server-side and never deletes/overwrites
+ * existing rows. Used for (a) first-run bootstrap from locally-persisted
+ * demo/seed data, and (b) the Team Access "Import JSON" backup feature.
+ */
+export async function importWorkspaceSnapshot(data: PmSnapshot): Promise<boolean> {
   setStatus("saving");
   try {
-    const data = snapshotFromStore();
-    // Every write requires a signed-in session (see routes/api/pm/workspace.ts).
-    // The live preview's iframe has partitioned cookies, so forward the bearer
-    // token the same way `authMiddleware` does for server functions.
-    const { getBearerToken } = await import("@/lib/auth/client");
-    const bearer = getBearerToken();
     const res = await fetch("/api/pm/workspace", {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
-      },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({ data }),
     });
-
     if (res.status === 401) {
-      // Not signed in — the shared workspace now requires a session to write.
-      // Keep local edits (Zustand persist) and surface as offline rather than
-      // silently discarding them.
-      setStatus("offline", "Sign in to sync changes to the team");
+      setStatus("offline", "Sign in to import into the shared workspace");
       return false;
     }
-
-    if (!res.ok) throw new Error(`Save failed (${res.status})`);
+    if (!res.ok) throw new Error(`Import failed (${res.status})`);
     const body = (await res.json()) as WorkspaceResponse;
-    serverVersion = body.version || serverVersion + 1;
-    emit();
+    if (body.data && isPmSnapshot(body.data)) applySnapshot(body.data);
     setStatus("synced");
     return true;
   } catch (e) {
-    setStatus("offline", e instanceof Error ? e.message : "Save failed");
+    setStatus("offline", e instanceof Error ? e.message : "Import failed");
     return false;
   }
 }
 
-function schedulePush() {
-  if (suppressPush) return;
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    void pushWorkspace();
-  }, 700);
-}
-
-/** Start shared multi-device sync (call once from client). */
+/** Start shared multi-device freshness polling (call once from client). Read-only. */
 export function startPmSync() {
   if (started || typeof window === "undefined") return;
   started = true;
 
   void pullWorkspace();
 
-  usePmStore.subscribe((state, prev) => {
-    if (suppressPush) return;
-    const keys = [
-      "projects",
-      "workPackages",
-      "drawingSets",
-      "drawingSheets",
-      "fab",
-      "deliveries",
-      "install",
-      "rfis",
-      "cos",
-      "roadblocks",
-      "tasks",
-    ] as const;
-    const changed = keys.some((k) => state[k] !== prev[k]);
-    if (changed) schedulePush();
-  });
-
   pollTimer = setInterval(() => {
     void (async () => {
-      if (syncStatus === "saving" || syncStatus === "loading") return;
+      // Skip a poll tick while a per-record mutation is in flight or a
+      // pull/import is already running, so we never overwrite the optimistic
+      // row a user just added with a server response that predates it.
+      if (pendingMutations > 0 || syncStatus === "loading" || syncStatus === "saving") return;
       try {
         const res = await fetch("/api/pm/workspace", { cache: "no-store" });
         if (!res.ok) return;
         const body = (await res.json()) as WorkspaceResponse;
-        if (body.version > serverVersion && body.data && isPmSnapshot(body.data)) {
-          serverVersion = body.version;
-          emit();
+        if (body.data && isPmSnapshot(body.data)) {
           applySnapshot(body.data);
           setStatus("synced");
         }
@@ -218,7 +217,6 @@ export function startPmSync() {
 }
 
 export function stopPmSync() {
-  if (saveTimer) clearTimeout(saveTimer);
   if (pollTimer) clearInterval(pollTimer);
   started = false;
 }
@@ -227,7 +225,6 @@ export function exportSnapshotJson(): string {
   return JSON.stringify(
     {
       exportedAt: new Date().toISOString(),
-      version: serverVersion,
       data: snapshotFromStore(),
     },
     null,
@@ -235,6 +232,12 @@ export function exportSnapshotJson(): string {
   );
 }
 
+/**
+ * Team Access "Import JSON" backup feature: parses a previously exported
+ * snapshot and merges it into the shared relational tables via the additive
+ * import endpoint (fills in any row missing server-side by id; never
+ * deletes or overwrites an existing row \u2014 see `src/lib/pm/api/import.ts`).
+ */
 export function importSnapshotJson(text: string): boolean {
   try {
     const parsed = JSON.parse(text) as { data?: unknown } | PmSnapshot;
@@ -243,8 +246,7 @@ export function importSnapshotJson(text: string): boolean {
         ? (parsed as { data: unknown }).data
         : parsed;
     if (!isPmSnapshot(data)) return false;
-    applySnapshot(data);
-    void pushWorkspace(true);
+    void importWorkspaceSnapshot(data as PmSnapshot);
     return true;
   } catch {
     return false;

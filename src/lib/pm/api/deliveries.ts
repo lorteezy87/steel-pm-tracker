@@ -3,26 +3,8 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { ensureDbReady } from "@/lib/db";
 import { newId } from "@/lib/pm/id";
 import type { Delivery } from "@/lib/pm/types";
-import { createEntity, deleteEntity, listEntities, updateEntity, type EntityTable } from "./entity-crud";
-
-const TABLE: EntityTable<Delivery> = {
-  table: "deliveries",
-  columns: {
-    id: "id",
-    projectId: "project_id",
-    workPackageId: "work_package_id",
-    loadNumber: "load_number",
-    pieceMarks: "piece_marks",
-    plannedShip: "planned_ship",
-    actualShip: "actual_ship",
-    plannedArrival: "planned_arrival",
-    actualArrival: "actual_arrival",
-    status: "status",
-    destination: "destination",
-    owner: "owner",
-    notes: "notes",
-  },
-};
+import { DELIVERIES as TABLE } from "./deliveries.table";
+import { createEntity, deleteEntity, listEntities, updateEntity } from "./entity-crud";
 
 export const listDeliveries = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -33,11 +15,16 @@ export const listDeliveries = createServerFn({ method: "GET" })
 
 export const createDelivery = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((row: Omit<Delivery, "id">) => row)
+  .validator((row: Omit<Delivery, "id"> & { id?: string }) => row)
   .handler(async ({ data, context }) => {
     await ensureDbReady();
-    const id = newId("dl");
-    return createEntity(TABLE, id, data, context.userId);
+    // Prefer the client-generated id (see src/lib/pm/id.ts's newId()) so the
+    // optimistic row Zustand inserts immediately keeps the SAME id once the
+    // server confirms it — no swap-the-temp-id reconciliation needed. Falls
+    // back to generating one server-side for any caller that omits it.
+    const { id: clientId, ...row } = data;
+    const id = clientId ?? newId("dl");
+    return createEntity(TABLE, id, row, context.userId);
   });
 
 export const updateDelivery = createServerFn({ method: "POST" })

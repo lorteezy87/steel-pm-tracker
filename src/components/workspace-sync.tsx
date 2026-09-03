@@ -1,11 +1,11 @@
 import { Cloud, CloudOff, Download, Link2, Loader2, Upload } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   exportSnapshotJson,
   getSyncMeta,
   importSnapshotJson,
   pullWorkspace,
-  pushWorkspace,
   startPmSync,
   subscribeSyncMeta,
 } from "@/lib/pm/sync";
@@ -13,6 +13,9 @@ import { usePmStore } from "@/lib/pm/store";
 import { cn } from "@/lib/utils";
 
 export function WorkspaceSyncBootstrap() {
+  const { user } = useCurrentUserState();
+  const wasSignedIn = useRef(false);
+
   useEffect(() => {
     const start = () => startPmSync();
     const persistApi = (
@@ -37,6 +40,24 @@ export function WorkspaceSyncBootstrap() {
       start();
     }
   }, []);
+
+  // The FIRST `pullWorkspace()` (above) usually runs before the visitor signs
+  // in, so its one-time bootstrap-import (see `sync.ts`'s
+  // `maybeOfferLocalImport`) 401s and no-ops — the import endpoint requires a
+  // session, same as every other write. Re-pull the instant sign-in succeeds
+  // so that import actually runs once a session exists, otherwise a fresh
+  // server never gets the locally-seeded demo projects/rows and every
+  // FIRST create from a brand-new browser would fail its FK check against a
+  // still-empty `projects` table.
+  useEffect(() => {
+    if (user && !wasSignedIn.current) {
+      wasSignedIn.current = true;
+      void pullWorkspace();
+    } else if (!user) {
+      wasSignedIn.current = false;
+    }
+  }, [user]);
+
   return null;
 }
 
@@ -124,7 +145,11 @@ export function ShareAccessPanel() {
     const reader = new FileReader();
     reader.onload = () => {
       const ok = importSnapshotJson(String(reader.result ?? ""));
-      setMsg(ok ? "Imported and pushed to shared workspace." : "Invalid workspace file.");
+      setMsg(
+        ok
+          ? "Importing into shared workspace (existing rows are never overwritten)…"
+          : "Invalid workspace file.",
+      );
     };
     reader.readAsText(file);
   }
@@ -138,8 +163,9 @@ export function ShareAccessPanel() {
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-fg">Team access</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Open this same URL on any computer or phone. Changes sync to the shared
-            workspace automatically (every few seconds).
+            Open this same URL on any computer or phone. Every add/edit/delete saves
+            straight to the shared database as you make it — "Refresh from team"
+            just pulls in other people's changes sooner than the automatic poll.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
             <code className="block min-w-0 flex-1 truncate rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-primary">
@@ -160,13 +186,6 @@ export function ShareAccessPanel() {
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 text-xs text-fg hover:border-primary/40"
             >
               Refresh from team
-            </button>
-            <button
-              type="button"
-              onClick={() => void pushWorkspace(true)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 text-xs text-fg hover:border-primary/40"
-            >
-              Push now
             </button>
             <button
               type="button"
@@ -193,7 +212,6 @@ export function ShareAccessPanel() {
           </div>
           <p className="mt-2 text-[11px] text-subtle">
             Sync: {meta.syncStatus}
-            {meta.serverVersion ? ` · v${meta.serverVersion}` : ""}
             {msg ? ` · ${msg}` : ""}
           </p>
         </div>

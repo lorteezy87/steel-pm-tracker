@@ -23,19 +23,22 @@ export type ColumnMap<T> = {
   [K in keyof T]?: string;
 };
 
-function toRow<T extends Record<string, unknown>>(
-  columns: ColumnMap<T>,
+function toRow<T extends { id: string }>(
+  def: EntityTable<T>,
   values: Partial<T>,
 ): Record<string, unknown> {
+  const columns = def.columns;
+  const nullable = new Set<keyof T>([...(def.nullableKeys ?? []), ...(def.numericKeys ?? [])]);
   const row: Record<string, unknown> = {};
   for (const key of Object.keys(columns) as (keyof T)[]) {
     const col = columns[key];
     if (!col) continue; // client-only field, no backing column
     if (key in values) {
       const v = values[key];
-      // Normalize "" -> null for optional date columns so Postgres date/numeric
-      // columns don't reject an empty string from a blank form field.
-      row[col] = v === "" ? null : (v ?? null);
+      // Empty string -> NULL only for columns backed by a nullable
+      // date/numeric column; every other (text, `not null default ''`)
+      // column must keep `''` as `''` — see `EntityTable.nullableKeys`.
+      row[col] = v === "" && nullable.has(key) ? null : (v ?? null);
     }
   }
   return row;
@@ -71,6 +74,16 @@ export interface EntityTable<T extends { id: string }> {
   columns: ColumnMap<T>;
   /** Columns that are numeric in Postgres and must be coerced to `number`. */
   numericKeys?: (keyof T)[];
+  /**
+   * Columns backed by a nullable Postgres `date`/`numeric` column (no
+   * `not null default`) — an empty client string must become SQL `NULL` for
+   * these (Postgres rejects `''` as an invalid date/numeric literal).
+   * Every OTHER text column is `not null default ''`, so `''` must be sent
+   * through AS `''`, never `null` (a real, pre-fix bug: converting every
+   * blank field to `null` violated the `not null` constraint on the very
+   * first create with any optional text field left empty).
+   */
+  nullableKeys?: (keyof T)[];
 }
 
 function coerceNumeric<T extends { id: string }>(def: EntityTable<T>, row: T): T {
@@ -113,7 +126,7 @@ export async function createEntity<T extends { id: string }>(
   userId: string,
 ): Promise<T> {
   const sql = await getSql();
-  const row = toRow(def.columns, values as Partial<T>);
+  const row = toRow(def, values as Partial<T>);
   const cols = ["id", ...Object.keys(row), "created_by", "updated_by"];
   const placeholders = cols.map((_, i) => `$${i + 1}`);
   const params = [id, ...Object.values(row), userId, userId];
@@ -134,7 +147,7 @@ export async function updateEntity<T extends { id: string }>(
   userId: string,
 ): Promise<T | null> {
   const sql = await getSql();
-  const row = toRow(def.columns, patch);
+  const row = toRow(def, patch);
   const setCols = Object.keys(row);
   if (setCols.length === 0) {
     const existing = await sql.query<Record<string, unknown>>(

@@ -4,66 +4,61 @@ import { AppShell } from "@/components/app-shell";
 import { CompleteCheck, ShowCompletedToggle } from "@/components/complete-check";
 import { ConfirmDelete, CrudDialog, type FormFieldDef } from "@/components/crud-dialog";
 import { DataTable, Td, Th } from "@/components/data-table";
-import { defaultProjectId, projectField, workPackageField } from "@/components/project-select-field";
+import { defaultProjectId, projectField } from "@/components/project-select-field";
 import { ProjectFilter } from "@/components/project-filter";
 import { AddButton, RowActions } from "@/components/row-actions";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { DELIVERY_STATUSES } from "@/lib/pm/constants";
+import { WORK_PACKAGE_STATUSES } from "@/lib/pm/constants";
 import { filterOpenOnly } from "@/lib/pm/complete";
 import { markEntityComplete, reopenEntity } from "@/lib/pm/mark-complete";
 import { filterByProject, projectCode, usePmStore } from "@/lib/pm/store";
-import type { Delivery, DeliveryStatus } from "@/lib/pm/types";
+import type { WorkPackage, WorkPackageStatus } from "@/lib/pm/types";
 import { formatDate } from "@/lib/utils";
 
-export const Route = createFileRoute("/delivery")({ component: DeliveryPage });
+export const Route = createFileRoute("/work-packages")({ component: WorkPackagesPage });
 
-function DeliveryPage() {
+function WorkPackagesPage() {
   const projects = usePmStore((s) => s.projects);
   const workPackages = usePmStore((s) => s.workPackages);
-  const deliveries = usePmStore((s) => s.deliveries);
   const filter = usePmStore((s) => s.filterProjectId);
-  const add = usePmStore((s) => s.addDelivery);
-  const update = usePmStore((s) => s.updateDelivery);
-  const del = usePmStore((s) => s.deleteDelivery);
+  const add = usePmStore((s) => s.addWorkPackage);
+  const update = usePmStore((s) => s.updateWorkPackage);
+  const del = usePmStore((s) => s.deleteWorkPackage);
   const [showCompleted, setShowCompleted] = useState(false);
-  const all = filterByProject(deliveries, filter);
+  const all = filterByProject(workPackages, filter);
   const rows = filterOpenOnly(all, showCompleted);
 
   const [dialog, setDialog] = useState<"add" | "edit" | null>(null);
-  const [editing, setEditing] = useState<Delivery | null>(null);
+  const [editing, setEditing] = useState<WorkPackage | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const fields: FormFieldDef[] = useMemo(
     () => [
       projectField(projects),
-      { key: "loadNumber", label: "Load / truck #", type: "text", required: true },
-      { key: "pieceMarks", label: "Work packages", type: "text", required: true, placeholder: "WP-01, WP-02" },
-      workPackageField(workPackages),
-      { key: "plannedShip", label: "Planned ship", type: "date" },
-      { key: "actualShip", label: "Actual ship", type: "date" },
-      { key: "plannedArrival", label: "Planned arrival", type: "date" },
-      { key: "actualArrival", label: "Actual arrival", type: "date" },
-      { key: "status", label: "Status", type: "select", options: DELIVERY_STATUSES },
-      { key: "destination", label: "Destination", type: "text" },
+      { key: "code", label: "Code", type: "text", required: true, placeholder: "WP-01" },
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "description", label: "Description", type: "text" },
+      { key: "status", label: "Status", type: "select", options: WORK_PACKAGE_STATUSES },
+      { key: "plannedStart", label: "Planned start", type: "date" },
+      { key: "plannedComplete", label: "Planned complete", type: "date" },
+      { key: "tonnage", label: "Tonnage", type: "number" },
       { key: "owner", label: "Owner", type: "text" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
-    [projects, workPackages],
+    [projects],
   );
 
   const initial = useMemo(() => {
     if (dialog === "edit" && editing) return { ...editing } as Record<string, string | number>;
     return {
       projectId: defaultProjectId(projects, filter),
-      loadNumber: "",
-      workPackageId: "",
-      pieceMarks: "",
-      plannedShip: "",
-      actualShip: "",
-      plannedArrival: "",
-      actualArrival: "",
-      status: "Scheduled",
-      destination: "",
+      code: "",
+      name: "",
+      description: "",
+      status: "Planned",
+      plannedStart: "",
+      plannedComplete: "",
+      tonnage: 0,
       owner: "",
       notes: "",
     };
@@ -71,8 +66,8 @@ function DeliveryPage() {
 
   return (
     <AppShell
-      title="Delivery"
-      subtitle="Loads · check done to clear"
+      title="Work Packages"
+      subtitle="Discrete scopes of work · parent for Fab/Delivery/Install"
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <ShowCompletedToggle
@@ -82,7 +77,7 @@ function DeliveryPage() {
             totalCount={all.length}
           />
           <ProjectFilter />
-          <AddButton label="Add load" onClick={() => setDialog("add")} />
+          <AddButton label="Add Work Package" onClick={() => setDialog("add")} />
         </div>
       }
     >
@@ -92,51 +87,45 @@ function DeliveryPage() {
             <tr>
               <Th className="w-10">Done</Th>
               <Th>Project</Th>
-              <Th>Load / Truck</Th>
-              <Th>Work Packages</Th>
-              <Th>Plan Ship</Th>
-              <Th>Act Ship</Th>
-              <Th>Plan Arr</Th>
-              <Th>Act Arr</Th>
+              <Th>Code</Th>
+              <Th>Name</Th>
               <Th>Status</Th>
-              <Th>Destination</Th>
+              <Th>Planned Start</Th>
+              <Th>Planned Complete</Th>
+              <Th>Tonnage</Th>
               <Th>Owner</Th>
               <Th className="w-20">Actions</Th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="hover:bg-surface-2/50">
+            {rows.map((wp) => (
+              <tr key={wp.id} className="hover:bg-surface-2/50">
                 <Td>
                   <CompleteCheck
-                    status={r.status}
+                    status={wp.status}
                     onComplete={() =>
-                      markEntityComplete(usePmStore.getState(), "delivery", r.id)
+                      markEntityComplete(usePmStore.getState(), "workPackage", wp.id)
                     }
-                    onReopen={() =>
-                      reopenEntity(usePmStore.getState(), "delivery", r.id)
-                    }
+                    onReopen={() => reopenEntity(usePmStore.getState(), "workPackage", wp.id)}
                   />
                 </Td>
-                <Td className="tabular font-medium">{projectCode(projects, r.projectId)}</Td>
-                <Td className="font-mono text-xs">{r.loadNumber}</Td>
-                <Td className="max-w-[10rem] truncate font-medium">{r.pieceMarks}</Td>
-                <Td className="tabular">{formatDate(r.plannedShip)}</Td>
-                <Td className="tabular text-muted">{formatDate(r.actualShip)}</Td>
-                <Td className="tabular">{formatDate(r.plannedArrival)}</Td>
-                <Td className="tabular text-muted">{formatDate(r.actualArrival)}</Td>
+                <Td className="tabular font-medium">{projectCode(projects, wp.projectId)}</Td>
+                <Td className="font-mono text-xs font-semibold">{wp.code}</Td>
+                <Td className="max-w-[14rem]">{wp.name}</Td>
                 <Td>
-                  <StatusBadge status={r.status} />
+                  <StatusBadge status={wp.status} />
                 </Td>
-                <Td>{r.destination}</Td>
-                <Td>{r.owner}</Td>
+                <Td className="tabular">{formatDate(wp.plannedStart)}</Td>
+                <Td className="tabular">{formatDate(wp.plannedComplete)}</Td>
+                <Td className="tabular">{wp.tonnage}</Td>
+                <Td>{wp.owner}</Td>
                 <Td>
                   <RowActions
                     onEdit={() => {
-                      setEditing(r);
+                      setEditing(wp);
                       setDialog("edit");
                     }}
-                    onDelete={() => setDeleteId(r.id)}
+                    onDelete={() => setDeleteId(wp.id)}
                   />
                 </Td>
               </tr>
@@ -145,14 +134,14 @@ function DeliveryPage() {
         </DataTable>
         {rows.length === 0 && (
           <div className="mt-3 rounded-lg border border-border bg-surface px-4 py-10 text-center text-sm text-muted">
-            {all.length === 0 ? "No deliveries." : "All open loads complete. Toggle Show completed."}
+            {all.length === 0 ? "No work packages." : "All open work packages complete. Toggle Show completed."}
           </div>
         )}
       </div>
 
       <CrudDialog
         open={dialog !== null}
-        title={dialog === "edit" ? "Edit delivery" : "Add delivery"}
+        title={dialog === "edit" ? "Edit work package" : "Add work package"}
         fields={fields}
         initial={initial}
         submitLabel={dialog === "edit" ? "Save changes" : "Create"}
@@ -163,15 +152,13 @@ function DeliveryPage() {
         onSubmit={(v) => {
           const row = {
             projectId: String(v.projectId),
-            loadNumber: String(v.loadNumber),
-            workPackageId: v.workPackageId ? String(v.workPackageId) : undefined,
-            pieceMarks: String(v.pieceMarks),
-            plannedShip: String(v.plannedShip),
-            actualShip: String(v.actualShip),
-            plannedArrival: String(v.plannedArrival),
-            actualArrival: String(v.actualArrival),
-            status: v.status as DeliveryStatus,
-            destination: String(v.destination),
+            code: String(v.code),
+            name: String(v.name),
+            description: String(v.description),
+            status: v.status as WorkPackageStatus,
+            plannedStart: String(v.plannedStart),
+            plannedComplete: String(v.plannedComplete),
+            tonnage: Number(v.tonnage) || 0,
             owner: String(v.owner),
             notes: String(v.notes),
           };
@@ -183,8 +170,8 @@ function DeliveryPage() {
       />
       <ConfirmDelete
         open={!!deleteId}
-        title="Delete delivery?"
-        message="Remove this load from the tracker?"
+        title="Delete work package?"
+        message="Removes the work package. Fab/Delivery/Install rows that reference it are unlinked, not deleted."
         onClose={() => setDeleteId(null)}
         onConfirm={() => {
           if (deleteId) del(deleteId);

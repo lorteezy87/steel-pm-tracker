@@ -19,8 +19,10 @@ function AccessPage() {
             <li>Copy the team link above (or your published production URL).</li>
             <li>Open it in Chrome, Edge, or Safari on any laptop, shop PC, or phone.</li>
             <li>
-              Everyone sees the same projects, drawings, fab, RFIs, and calendar
-              to-dos — check-complete and edits sync automatically.
+              Everyone sees the same projects, work packages, drawings, fab, RFIs,
+              change orders, roadblocks, and calendar to-dos — check-complete and
+              edits sync automatically. Sign in with email/password to make changes;
+              browsing works without an account.
             </li>
             <li>
               Optional backup: Export JSON and email/drive it; Import on another

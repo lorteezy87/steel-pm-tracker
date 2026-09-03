@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { CompleteCheck, ShowCompletedToggle } from "@/components/complete-check";
 import { ConfirmDelete, CrudDialog, type FormFieldDef } from "@/components/crud-dialog";
 import { DataTable, Td, Th } from "@/components/data-table";
-import { defaultProjectId, projectField } from "@/components/project-select-field";
+import { defaultProjectId, projectField, workPackageField } from "@/components/project-select-field";
 import { ProjectFilter } from "@/components/project-filter";
 import { AddButton, RowActions } from "@/components/row-actions";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/installation")({ component: InstallPage }
 
 function InstallPage() {
   const projects = usePmStore((s) => s.projects);
+  const workPackages = usePmStore((s) => s.workPackages);
   const install = usePmStore((s) => s.install);
   const filter = usePmStore((s) => s.filterProjectId);
   const add = usePmStore((s) => s.addInstall);
@@ -37,6 +38,7 @@ function InstallPage() {
       projectField(projects),
       { key: "sequenceArea", label: "Sequence / area", type: "text", required: true },
       { key: "pieceMarks", label: "Work package", type: "text", required: true },
+      workPackageField(workPackages),
       { key: "plannedErect", label: "Planned erect", type: "date" },
       { key: "status", label: "Status", type: "select", options: INSTALL_STATUSES },
       { key: "pctComplete", label: "% complete", type: "number" },
@@ -44,7 +46,7 @@ function InstallPage() {
       { key: "owner", label: "Owner", type: "text" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
-    [projects],
+    [projects, workPackages],
   );
 
   const initial = useMemo(() => {
@@ -52,6 +54,7 @@ function InstallPage() {
     return {
       projectId: defaultProjectId(projects, filter),
       sequenceArea: "",
+      workPackageId: "",
       pieceMarks: "",
       plannedErect: "",
       status: "On Site",
@@ -155,6 +158,7 @@ function InstallPage() {
           const row = {
             projectId: String(v.projectId),
             sequenceArea: String(v.sequenceArea),
+            workPackageId: v.workPackageId ? String(v.workPackageId) : undefined,
             pieceMarks: String(v.pieceMarks),
             plannedErect: String(v.plannedErect),
             status: v.status as InstallStatus,

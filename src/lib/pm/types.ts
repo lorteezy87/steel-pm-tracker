@@ -47,6 +47,30 @@ export type TaskStatus =
 
 export type Priority = "High" | "Med" | "Low";
 
+export type WorkPackageStatus =
+  | "Planned"
+  | "Released"
+  | "In Fabrication"
+  | "Ready to Ship"
+  | "Shipped"
+  | "Erected"
+  | "Complete";
+
+export type RoadblockCategory =
+  | "Drawings"
+  | "Fabrication"
+  | "Delivery"
+  | "Installation"
+  | "RFI"
+  | "ChangeOrder"
+  | "Procurement"
+  | "Safety"
+  | "Other";
+
+export type RoadblockImpact = "Schedule" | "Cost" | "Safety" | "Quality" | "Other";
+
+export type RoadblockStatus = "Open" | "Resolved";
+
 export interface Project {
   id: string;
   code: string;
@@ -87,11 +111,28 @@ export interface DrawingSheet {
   notes: string;
 }
 
+/** Discrete scope of work within a project — the parent for Fab/Delivery/Install. */
+export interface WorkPackage {
+  id: string;
+  projectId: string;
+  code: string;
+  name: string;
+  description: string;
+  status: WorkPackageStatus;
+  plannedStart: string;
+  plannedComplete: string;
+  tonnage: number;
+  owner: string;
+  notes: string;
+}
+
 /** Fabrication tracked by work package (not individual piece marks). */
 export interface FabItem {
   id: string;
   projectId: string;
   workPackage: string;
+  /** Optional FK to a first-class WorkPackage record. */
+  workPackageId?: string;
   description: string;
   qty: number;
   weightTons: number;
@@ -107,6 +148,8 @@ export interface FabItem {
 export interface Delivery {
   id: string;
   projectId: string;
+  /** Optional FK to a first-class WorkPackage record. */
+  workPackageId?: string;
   loadNumber: string;
   /** Work package(s) or piece list on the truck */
   pieceMarks: string;
@@ -123,6 +166,8 @@ export interface Delivery {
 export interface InstallItem {
   id: string;
   projectId: string;
+  /** Optional FK to a first-class WorkPackage record. */
+  workPackageId?: string;
   sequenceArea: string;
   /** Work package or area scope */
   pieceMarks: string;
@@ -173,6 +218,26 @@ export interface Task {
   notes: string;
 }
 
+/** Anything blocking progress on a project — optionally linked to another tracker record. */
+export interface Roadblock {
+  id: string;
+  projectId: string;
+  title: string;
+  category: RoadblockCategory;
+  description: string;
+  raisedDate: string;
+  ballInCourt: string;
+  impact: RoadblockImpact;
+  severity: Priority;
+  status: RoadblockStatus;
+  resolvedDate: string;
+  /** Free-text link to another tracker record (RFI, CO, drawing set, …). */
+  linkedEntityType: string;
+  linkedEntityId: string;
+  owner: string;
+  notes: string;
+}
+
 export type TrackerName =
   | "Drawings"
   | "Fabrication"
@@ -180,7 +245,9 @@ export type TrackerName =
   | "Installation"
   | "RFIs"
   | "Change Orders"
-  | "Tasks";
+  | "Tasks"
+  | "Work Packages"
+  | "Roadblocks";
 
 export type LookaheadEntityType =
   | "drawingSet"
@@ -189,7 +256,9 @@ export type LookaheadEntityType =
   | "delivery"
   | "install"
   | "rfi"
-  | "task";
+  | "task"
+  | "workPackage"
+  | "roadblock";
 
 export interface LookaheadItem {
   projectCode: string;
@@ -216,4 +285,6 @@ export interface KpiSnapshot {
   pendingCoValue: number;
   due48h: number;
   due10d: number;
+  openRoadblocks: number;
+  overdueRoadblocks: number;
 }

@@ -1,87 +1,61 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ensureDbReady, getSql } from "@/lib/db";
+import { ensureDbReady } from "@/lib/db";
+import { requireUserId } from "@/lib/auth/verify.server";
+import { assertSameSiteRequest } from "@/lib/auth/isolation.server";
 import { isPmSnapshot, type PmSnapshot, type WorkspaceResponse } from "@/lib/pm/snapshot";
+import { importSnapshotGaps, readFullSnapshot } from "@/lib/pm/api/import";
 
-const WORKSPACE_ID = "default";
-
-async function ensureWorkspaceTable() {
-  const sql = await getSql();
-  await sql.query(`
-    CREATE TABLE IF NOT EXISTS pm_workspace (
-      id TEXT PRIMARY KEY,
-      payload JSONB NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `);
-  await sql.query(
-    `INSERT INTO pm_workspace (id, payload, version)
-     VALUES ($1, '{}'::jsonb, 0)
-     ON CONFLICT (id) DO NOTHING`,
-    [WORKSPACE_ID],
-  );
-}
-
-async function readWorkspace(): Promise<WorkspaceResponse> {
-  await ensureDbReady();
-  await ensureWorkspaceTable();
-  const sql = await getSql();
-  const rows = await sql.query<{
-    id: string;
-    payload: unknown;
-    version: number;
-    updated_at: string | Date | null;
-  }>("SELECT id, payload, version, updated_at FROM pm_workspace WHERE id = $1", [
-    WORKSPACE_ID,
-  ]);
-
-  const row = rows[0];
-  if (!row) {
-    return {
-      id: WORKSPACE_ID,
-      version: 0,
-      updatedAt: null,
-      data: null,
-      source: "empty",
-    };
-  }
-
-  let payload = row.payload;
-  if (typeof payload === "string") {
-    try {
-      payload = JSON.parse(payload);
-    } catch {
-      payload = {};
-    }
-  }
-
-  const data =
-    payload && typeof payload === "object" && Object.keys(payload as object).length > 0
-      ? isPmSnapshot(payload)
-        ? payload
-        : null
-      : null;
-
-  return {
-    id: row.id,
-    version: Number(row.version) || 0,
-    updatedAt:
-      row.updated_at == null
-        ? null
-        : typeof row.updated_at === "string"
-          ? row.updated_at
-          : row.updated_at.toISOString(),
-    data,
-    source: data ? "server" : "empty",
-  };
-}
+/**
+ * Shared workspace endpoint, backed by the per-record relational tables from
+ * migrations/0003_entities.sql (`pm_workspace`, the old JSONB blob, is left
+ * in place, unused).
+ *
+ * - **GET**: read-only convenience "load everything on startup" — assembles
+ *   a `PmSnapshot` by listing every table. This is what `src/lib/pm/sync.ts`
+ *   calls on page load and its periodic freshness poll. Every actual
+ *   TRACKER EDIT (add/update/delete on any entity) goes straight to that
+ *   entity's own `src/lib/pm/api/<entity>.ts` `createServerFn` the moment the
+ *   user makes it (see `src/lib/pm/store.ts`) \u2014 NOT through this route. GET
+ *   is intentionally left open (no session required) so browsing works
+ *   before sign-in, matching prior behavior.
+ * - **PUT**: a ONE-TIME, ADDITIVE import endpoint only \u2014 never a steady-state
+ *   save path. It inserts any row from the client's snapshot whose id isn't
+ *   already present server-side and never updates or deletes an existing
+ *   row (see `src/lib/pm/api/import.ts`). Used for (a) first-run bootstrap
+ *   from a browser's locally-persisted pre-upgrade data, and (b) the Team
+ *   Access "Import JSON" backup feature. Because it never touches existing
+ *   rows, two people importing/editing concurrently can't clobber each
+ *   other here \u2014 unlike the old version of this endpoint, which did a
+ *   `delete from <table>` + full reinsert of every table on every save.
+ *   Requires a signed-in session, same as every other mutation.
+ *
+ * IMPORTANT: shared single-company tool, NOT per-user-isolated \u2014 see the
+ * "IMPORTANT deviation" note in migrations/0003_entities.sql. Every
+ * signed-in user reads/writes the SAME shared rows; `created_by`/`updated_by`
+ * are audit trail only, never a visibility filter.
+ */
 
 export const Route = createFileRoute("/api/pm/workspace")({
   server: {
     handlers: {
       GET: async () => {
         try {
-          const body = await readWorkspace();
+          await ensureDbReady();
+          const data = await readFullSnapshot();
+          const total = Object.values(data).reduce(
+            (sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0),
+            0,
+          );
+          const body: WorkspaceResponse = {
+            id: "default",
+            // No single incrementing version column now that data lives across
+            // many tables \u2014 total row count is a cheap "did anything change"
+            // signal, informational only (nothing branches on it being exact).
+            version: total,
+            updatedAt: new Date().toISOString(),
+            data: total > 0 ? data : null,
+            source: total > 0 ? "server" : "empty",
+          };
           return Response.json(body, {
             headers: { "Cache-Control": "no-store" },
           });
@@ -99,60 +73,41 @@ export const Route = createFileRoute("/api/pm/workspace")({
 
       PUT: async ({ request }) => {
         try {
-          const body = (await request.json()) as {
-            data?: unknown;
-            expectedVersion?: number;
-          };
+          // Every write requires a signed-in session (no anonymous writes) —
+          // reads stay open (see the module docstring), writes do not.
+          assertSameSiteRequest();
+          const userId = await requireUserId();
 
+          const body = (await request.json()) as { data?: unknown };
           if (!isPmSnapshot(body.data)) {
-            return Response.json(
-              { error: "Invalid workspace payload" },
-              { status: 400 },
-            );
+            return Response.json({ error: "Invalid workspace payload" }, { status: 400 });
           }
-
           const data = body.data as PmSnapshot;
           await ensureDbReady();
-          await ensureWorkspaceTable();
-          const sql = await getSql();
+          // Insert-only gap fill — never deletes or overwrites an existing row.
+          await importSnapshotGaps(data, userId);
 
-          const current = await readWorkspace();
-          if (
-            typeof body.expectedVersion === "number" &&
-            current.version > 0 &&
-            body.expectedVersion !== current.version
-          ) {
-            return Response.json(
-              {
-                error: "Version conflict",
-                version: current.version,
-                data: current.data,
-                updatedAt: current.updatedAt,
-              },
-              { status: 409 },
-            );
-          }
-
-          const nextVersion = (current.version || 0) + 1;
-          const payloadJson = JSON.stringify(data);
-
-          await sql.query(
-            `INSERT INTO pm_workspace (id, payload, version, updated_at)
-             VALUES ($1, $2::jsonb, $3, now())
-             ON CONFLICT (id) DO UPDATE SET
-               payload = EXCLUDED.payload,
-               version = EXCLUDED.version,
-               updated_at = now()`,
-            [WORKSPACE_ID, payloadJson, nextVersion],
+          const saved = await readFullSnapshot();
+          const total = Object.values(saved).reduce(
+            (sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0),
+            0,
           );
-
-          const saved = await readWorkspace();
-          return Response.json(saved);
+          const responseBody: WorkspaceResponse = {
+            id: "default",
+            version: total,
+            updatedAt: new Date().toISOString(),
+            data: saved,
+            source: "server",
+          };
+          return Response.json(responseBody);
         } catch (err) {
-          console.error("[pm/workspace] PUT failed", err);
+          if (err instanceof Error && err.name === "UnauthorizedError") {
+            return Response.json({ error: "Unauthorized" }, { status: 401 });
+          }
+          console.error("[pm/workspace] PUT (import) failed", err);
           return Response.json(
             {
-              error: "Failed to save workspace",
+              error: "Failed to import workspace",
               detail: err instanceof Error ? err.message : String(err),
             },
             { status: 500 },

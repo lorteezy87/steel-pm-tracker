@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
+import { GROK_PROVIDERS, authClient, authEnabled, inLivePreview, signIn } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/login")({ component: Login });
 
@@ -103,7 +103,15 @@ function Login() {
                 : "New here? Create an account"}
             </button>
 
-            {GROK_PROVIDERS.length > 0 && (
+            {/*
+             * The broker OAuth buttons (Google / X) only work with the shared
+             * preview client, which the broker only accepts callbacks for on
+             * `*.grok-sandbox.com` hosts. On any other deployed origin (e.g. this
+             * app's real production URL) they always fail with "Invalid redirect
+             * URI", so hide them outside the live preview instead of showing a
+             * button that's guaranteed to error when clicked.
+             */}
+            {GROK_PROVIDERS.length > 0 && inLivePreview() && (
               <>
                 <div className="flex items-center gap-2 text-[10px] text-muted uppercase">
                   <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />

@@ -13,17 +13,23 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccessRouteImport } from './routes/access'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as ChangesRouteImport } from './routes/changes'
+import { Route as DailyRouteImport } from './routes/daily'
 import { Route as DeliveryRouteImport } from './routes/delivery'
 import { Route as DrawingsRouteImport } from './routes/drawings'
 import { Route as FabricationRouteImport } from './routes/fabrication'
 import { Route as InstallationRouteImport } from './routes/installation'
+import { Route as JournalRouteImport } from './routes/journal'
+import { Route as ListsRouteImport } from './routes/lists'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as Lookahead10dRouteImport } from './routes/lookahead-10d'
 import { Route as Lookahead48hRouteImport } from './routes/lookahead-48h'
+import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as RfisRouteImport } from './routes/rfis'
 import { Route as RoadblocksRouteImport } from './routes/roadblocks'
+import { Route as SubmittalsRouteImport } from './routes/submittals'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as WorkPackagesRouteImport } from './routes/work-packages'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPmWorkspaceRouteImport } from './routes/api/pm/workspace'
@@ -48,6 +54,11 @@ const ChangesRoute = ChangesRouteImport.update({
   path: '/changes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DailyRoute = DailyRouteImport.update({
+  id: '/daily',
+  path: '/daily',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeliveryRoute = DeliveryRouteImport.update({
   id: '/delivery',
   path: '/delivery',
@@ -68,6 +79,16 @@ const InstallationRoute = InstallationRouteImport.update({
   path: '/installation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JournalRoute = JournalRouteImport.update({
+  id: '/journal',
+  path: '/journal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListsRoute = ListsRouteImport.update({
+  id: '/lists',
+  path: '/lists',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -81,6 +102,11 @@ const Lookahead10dRoute = Lookahead10dRouteImport.update({
 const Lookahead48hRoute = Lookahead48hRouteImport.update({
   id: '/lookahead-48h',
   path: '/lookahead-48h',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlannerRoute = PlannerRouteImport.update({
+  id: '/planner',
+  path: '/planner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsRoute = ProjectsRouteImport.update({
@@ -98,9 +124,19 @@ const RoadblocksRoute = RoadblocksRouteImport.update({
   path: '/roadblocks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SubmittalsRoute = SubmittalsRouteImport.update({
+  id: '/submittals',
+  path: '/submittals',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TimelineRoute = TimelineRouteImport.update({
+  id: '/timeline',
+  path: '/timeline',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkPackagesRoute = WorkPackagesRouteImport.update({
@@ -124,17 +160,23 @@ export interface FileRoutesByFullPath {
   '/access': typeof AccessRoute
   '/calendar': typeof CalendarRoute
   '/changes': typeof ChangesRoute
+  '/daily': typeof DailyRoute
   '/delivery': typeof DeliveryRoute
   '/drawings': typeof DrawingsRoute
   '/fabrication': typeof FabricationRoute
   '/installation': typeof InstallationRoute
+  '/journal': typeof JournalRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/lookahead-10d': typeof Lookahead10dRoute
   '/lookahead-48h': typeof Lookahead48hRoute
+  '/planner': typeof PlannerRoute
   '/projects': typeof ProjectsRoute
   '/rfis': typeof RfisRoute
   '/roadblocks': typeof RoadblocksRoute
+  '/submittals': typeof SubmittalsRoute
   '/tasks': typeof TasksRoute
+  '/timeline': typeof TimelineRoute
   '/work-packages': typeof WorkPackagesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/pm/workspace': typeof ApiPmWorkspaceRoute
@@ -144,17 +186,23 @@ export interface FileRoutesByTo {
   '/access': typeof AccessRoute
   '/calendar': typeof CalendarRoute
   '/changes': typeof ChangesRoute
+  '/daily': typeof DailyRoute
   '/delivery': typeof DeliveryRoute
   '/drawings': typeof DrawingsRoute
   '/fabrication': typeof FabricationRoute
   '/installation': typeof InstallationRoute
+  '/journal': typeof JournalRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/lookahead-10d': typeof Lookahead10dRoute
   '/lookahead-48h': typeof Lookahead48hRoute
+  '/planner': typeof PlannerRoute
   '/projects': typeof ProjectsRoute
   '/rfis': typeof RfisRoute
   '/roadblocks': typeof RoadblocksRoute
+  '/submittals': typeof SubmittalsRoute
   '/tasks': typeof TasksRoute
+  '/timeline': typeof TimelineRoute
   '/work-packages': typeof WorkPackagesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/pm/workspace': typeof ApiPmWorkspaceRoute
@@ -165,17 +213,23 @@ export interface FileRoutesById {
   '/access': typeof AccessRoute
   '/calendar': typeof CalendarRoute
   '/changes': typeof ChangesRoute
+  '/daily': typeof DailyRoute
   '/delivery': typeof DeliveryRoute
   '/drawings': typeof DrawingsRoute
   '/fabrication': typeof FabricationRoute
   '/installation': typeof InstallationRoute
+  '/journal': typeof JournalRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/lookahead-10d': typeof Lookahead10dRoute
   '/lookahead-48h': typeof Lookahead48hRoute
+  '/planner': typeof PlannerRoute
   '/projects': typeof ProjectsRoute
   '/rfis': typeof RfisRoute
   '/roadblocks': typeof RoadblocksRoute
+  '/submittals': typeof SubmittalsRoute
   '/tasks': typeof TasksRoute
+  '/timeline': typeof TimelineRoute
   '/work-packages': typeof WorkPackagesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/pm/workspace': typeof ApiPmWorkspaceRoute
@@ -187,17 +241,23 @@ export interface FileRouteTypes {
     | '/access'
     | '/calendar'
     | '/changes'
+    | '/daily'
     | '/delivery'
     | '/drawings'
     | '/fabrication'
     | '/installation'
+    | '/journal'
+    | '/lists'
     | '/login'
     | '/lookahead-10d'
     | '/lookahead-48h'
+    | '/planner'
     | '/projects'
     | '/rfis'
     | '/roadblocks'
+    | '/submittals'
     | '/tasks'
+    | '/timeline'
     | '/work-packages'
     | '/api/auth/$'
     | '/api/pm/workspace'
@@ -207,17 +267,23 @@ export interface FileRouteTypes {
     | '/access'
     | '/calendar'
     | '/changes'
+    | '/daily'
     | '/delivery'
     | '/drawings'
     | '/fabrication'
     | '/installation'
+    | '/journal'
+    | '/lists'
     | '/login'
     | '/lookahead-10d'
     | '/lookahead-48h'
+    | '/planner'
     | '/projects'
     | '/rfis'
     | '/roadblocks'
+    | '/submittals'
     | '/tasks'
+    | '/timeline'
     | '/work-packages'
     | '/api/auth/$'
     | '/api/pm/workspace'
@@ -227,17 +293,23 @@ export interface FileRouteTypes {
     | '/access'
     | '/calendar'
     | '/changes'
+    | '/daily'
     | '/delivery'
     | '/drawings'
     | '/fabrication'
     | '/installation'
+    | '/journal'
+    | '/lists'
     | '/login'
     | '/lookahead-10d'
     | '/lookahead-48h'
+    | '/planner'
     | '/projects'
     | '/rfis'
     | '/roadblocks'
+    | '/submittals'
     | '/tasks'
+    | '/timeline'
     | '/work-packages'
     | '/api/auth/$'
     | '/api/pm/workspace'
@@ -248,17 +320,23 @@ export interface RootRouteChildren {
   AccessRoute: typeof AccessRoute
   CalendarRoute: typeof CalendarRoute
   ChangesRoute: typeof ChangesRoute
+  DailyRoute: typeof DailyRoute
   DeliveryRoute: typeof DeliveryRoute
   DrawingsRoute: typeof DrawingsRoute
   FabricationRoute: typeof FabricationRoute
   InstallationRoute: typeof InstallationRoute
+  JournalRoute: typeof JournalRoute
+  ListsRoute: typeof ListsRoute
   LoginRoute: typeof LoginRoute
   Lookahead10dRoute: typeof Lookahead10dRoute
   Lookahead48hRoute: typeof Lookahead48hRoute
+  PlannerRoute: typeof PlannerRoute
   ProjectsRoute: typeof ProjectsRoute
   RfisRoute: typeof RfisRoute
   RoadblocksRoute: typeof RoadblocksRoute
+  SubmittalsRoute: typeof SubmittalsRoute
   TasksRoute: typeof TasksRoute
+  TimelineRoute: typeof TimelineRoute
   WorkPackagesRoute: typeof WorkPackagesRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPmWorkspaceRoute: typeof ApiPmWorkspaceRoute
@@ -294,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChangesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/daily': {
+      id: '/daily'
+      path: '/daily'
+      fullPath: '/daily'
+      preLoaderRoute: typeof DailyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/delivery': {
       id: '/delivery'
       path: '/delivery'
@@ -322,6 +407,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstallationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/journal': {
+      id: '/journal'
+      path: '/journal'
+      fullPath: '/journal'
+      preLoaderRoute: typeof JournalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lists': {
+      id: '/lists'
+      path: '/lists'
+      fullPath: '/lists'
+      preLoaderRoute: typeof ListsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -341,6 +440,13 @@ declare module '@tanstack/react-router' {
       path: '/lookahead-48h'
       fullPath: '/lookahead-48h'
       preLoaderRoute: typeof Lookahead48hRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planner': {
+      id: '/planner'
+      path: '/planner'
+      fullPath: '/planner'
+      preLoaderRoute: typeof PlannerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects': {
@@ -364,11 +470,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoadblocksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/submittals': {
+      id: '/submittals'
+      path: '/submittals'
+      fullPath: '/submittals'
+      preLoaderRoute: typeof SubmittalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks': {
       id: '/tasks'
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/timeline': {
+      id: '/timeline'
+      path: '/timeline'
+      fullPath: '/timeline'
+      preLoaderRoute: typeof TimelineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/work-packages': {
@@ -400,17 +520,23 @@ const rootRouteChildren: RootRouteChildren = {
   AccessRoute: AccessRoute,
   CalendarRoute: CalendarRoute,
   ChangesRoute: ChangesRoute,
+  DailyRoute: DailyRoute,
   DeliveryRoute: DeliveryRoute,
   DrawingsRoute: DrawingsRoute,
   FabricationRoute: FabricationRoute,
   InstallationRoute: InstallationRoute,
+  JournalRoute: JournalRoute,
+  ListsRoute: ListsRoute,
   LoginRoute: LoginRoute,
   Lookahead10dRoute: Lookahead10dRoute,
   Lookahead48hRoute: Lookahead48hRoute,
+  PlannerRoute: PlannerRoute,
   ProjectsRoute: ProjectsRoute,
   RfisRoute: RfisRoute,
   RoadblocksRoute: RoadblocksRoute,
+  SubmittalsRoute: SubmittalsRoute,
   TasksRoute: TasksRoute,
+  TimelineRoute: TimelineRoute,
   WorkPackagesRoute: WorkPackagesRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPmWorkspaceRoute: ApiPmWorkspaceRoute,

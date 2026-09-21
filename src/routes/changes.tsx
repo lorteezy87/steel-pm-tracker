@@ -11,11 +11,22 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { CO_STATUSES } from "@/lib/pm/constants";
 import { filterOpenOnly } from "@/lib/pm/complete";
 import { markEntityComplete, reopenEntity } from "@/lib/pm/mark-complete";
-import { filterByProject, projectCode, usePmStore } from "@/lib/pm/store";
+import { DEMO_TODAY, filterByProject, projectCode, usePmStore } from "@/lib/pm/store";
 import type { ChangeOrder, CoStatus } from "@/lib/pm/types";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/changes")({ component: ChangesPage });
+
+/** A decision date that has passed while the CO is still undecided. */
+function overdueDecision(c: ChangeOrder): boolean {
+  return (
+    !!c.decisionDue &&
+    c.decisionDue < DEMO_TODAY &&
+    c.status !== "Approved" &&
+    c.status !== "Rejected" &&
+    c.status !== "Implemented"
+  );
+}
 
 function ChangesPage() {
   const projects = usePmStore((s) => s.projects);
@@ -41,6 +52,8 @@ function ChangesPage() {
       { key: "cost", label: "Cost ($)", type: "number" },
       { key: "scheduleDays", label: "Schedule days", type: "number" },
       { key: "status", label: "Status", type: "select", options: CO_STATUSES },
+      { key: "submitted", label: "Pricing submitted", type: "date" },
+      { key: "decisionDue", label: "Decision due", type: "date" },
       { key: "owner", label: "Owner", type: "text" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
@@ -57,6 +70,8 @@ function ChangesPage() {
       cost: 0,
       scheduleDays: 0,
       status: "Draft",
+      submitted: "",
+      decisionDue: "",
       owner: "",
       notes: "",
     };
@@ -91,13 +106,20 @@ function ChangesPage() {
               <Th>Cost</Th>
               <Th>Days</Th>
               <Th>Status</Th>
+              <Th>Submitted</Th>
+              <Th>Decision Due</Th>
               <Th>Owner</Th>
               <Th className="w-20">Actions</Th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="hover:bg-surface-2/50">
+              <tr
+                key={r.id}
+                className={cn(
+                  overdueDecision(r) ? "bg-status-red/5" : "hover:bg-surface-2/50",
+                )}
+              >
                 <Td>
                   <CompleteCheck
                     status={r.status}
@@ -117,6 +139,15 @@ function ChangesPage() {
                 <Td className="tabular">{r.scheduleDays}</Td>
                 <Td>
                   <StatusBadge status={r.status} />
+                </Td>
+                <Td className="tabular">{formatDate(r.submitted)}</Td>
+                <Td
+                  className={cn(
+                    "tabular",
+                    overdueDecision(r) && "font-semibold text-status-red",
+                  )}
+                >
+                  {formatDate(r.decisionDue)}
                 </Td>
                 <Td>{r.owner}</Td>
                 <Td>
@@ -158,6 +189,8 @@ function ChangesPage() {
             cost: Number(v.cost) || 0,
             scheduleDays: Number(v.scheduleDays) || 0,
             status: v.status as CoStatus,
+            submitted: String(v.submitted),
+            decisionDue: String(v.decisionDue),
             owner: String(v.owner),
             notes: String(v.notes),
           };

@@ -38,6 +38,35 @@ export type CoStatus =
   | "Rejected"
   | "Implemented";
 
+export type SubmittalStatus =
+  | "Not Submitted"
+  | "Submitted"
+  | "Under Review"
+  | "Approved"
+  | "Approved as Noted"
+  | "Revise & Resubmit"
+  | "Rejected";
+
+/** Submittal package types a steel fabricator actually transmits. */
+export type SubmittalType =
+  | "Shop Drawings"
+  | "Erection Drawings"
+  | "Anchor Bolt Plan"
+  | "Embed Plan"
+  | "Mill Certs"
+  | "Welder Quals"
+  | "WPS / PQR"
+  | "Bolt Certs"
+  | "Paint / Coating"
+  | "Galvanizing"
+  | "Joists / Girders"
+  | "Metal Deck"
+  | "Grating / Handrail"
+  | "Stairs"
+  | "Erection Plan"
+  | "Rigging / Lift Plan"
+  | "Other";
+
 export type TaskStatus =
   | "Not Started"
   | "In Progress"
@@ -202,6 +231,10 @@ export interface ChangeOrder {
   cost: number;
   scheduleDays: number;
   status: CoStatus;
+  /** Date the pricing went out. */
+  submitted: string;
+  /** Date an answer is needed before the change starts eating job float. */
+  decisionDue: string;
   owner: string;
   notes: string;
 }
@@ -238,6 +271,52 @@ export interface Roadblock {
   notes: string;
 }
 
+/**
+ * Formal submittal register entry — the contractual transmittal that carries a
+ * package to the GC/EOR and comes back stamped. Distinct from `DrawingSet`:
+ * that tracks the detailing deliverable sheet by sheet, this tracks the
+ * submittal/return cycle (spec section, revision, ball in court, due back).
+ */
+export interface Submittal {
+  id: string;
+  projectId: string;
+  submittalNumber: string;
+  type: SubmittalType;
+  title: string;
+  specSection: string;
+  revision: string;
+  submitted: string;
+  dueBack: string;
+  returned: string;
+  status: SubmittalStatus;
+  ballInCourt: string;
+  /** Free-text link back to the drawing set this submittal transmitted. */
+  linkedDrawingSet: string;
+  owner: string;
+  notes: string;
+}
+
+/**
+ * Daily field journal — one row per project per day. The erection-side record
+ * that backs up delay claims and change-order time impacts.
+ */
+export interface JournalEntry {
+  id: string;
+  projectId: string;
+  entryDate: string;
+  weather: string;
+  tempHigh: number;
+  crewCount: number;
+  manhours: number;
+  tonsErected: number;
+  workPerformed: string;
+  delays: string;
+  deliveriesReceived: string;
+  visitors: string;
+  safetyNotes: string;
+  author: string;
+}
+
 export type TrackerName =
   | "Drawings"
   | "Fabrication"
@@ -247,7 +326,8 @@ export type TrackerName =
   | "Change Orders"
   | "Tasks"
   | "Work Packages"
-  | "Roadblocks";
+  | "Roadblocks"
+  | "Submittals";
 
 export type LookaheadEntityType =
   | "drawingSet"
@@ -258,7 +338,9 @@ export type LookaheadEntityType =
   | "rfi"
   | "task"
   | "workPackage"
-  | "roadblock";
+  | "roadblock"
+  | "submittal"
+  | "changeOrder";
 
 export interface LookaheadItem {
   projectCode: string;
@@ -287,4 +369,7 @@ export interface KpiSnapshot {
   due10d: number;
   openRoadblocks: number;
   overdueRoadblocks: number;
+  openSubmittals: number;
+  overdueSubmittals: number;
+  ballInCourtUs: number;
 }

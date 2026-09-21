@@ -12,8 +12,11 @@ export const CHANGE_ORDERS: EntityTable<ChangeOrder> = {
     cost: "cost",
     scheduleDays: "schedule_days",
     status: "status",
+    submitted: "submitted",
+    decisionDue: "decision_due",
     owner: "owner",
     notes: "notes",
   },
   numericKeys: ["cost", "scheduleDays"],
+  nullableKeys: ["submitted", "decisionDue"],
 };

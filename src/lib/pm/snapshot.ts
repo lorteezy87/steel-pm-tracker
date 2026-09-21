@@ -5,9 +5,11 @@ import type {
   DrawingSheet,
   FabItem,
   InstallItem,
+  JournalEntry,
   Project,
   Rfi,
   Roadblock,
+  Submittal,
   Task,
   WorkPackage,
 } from "./types";
@@ -25,6 +27,8 @@ export type PmSnapshot = {
   cos: ChangeOrder[];
   roadblocks: Roadblock[];
   tasks: Task[];
+  submittals: Submittal[];
+  journal: JournalEntry[];
 };
 
 export type WorkspaceResponse = {
@@ -51,6 +55,8 @@ export function isPmSnapshot(v: unknown): v is PmSnapshot {
     // Older exported snapshots (pre relational-upgrade) won't have these —
     // treat them as optional so `importSnapshotJson` can still backfill.
     (o.workPackages === undefined || Array.isArray(o.workPackages)) &&
-    (o.roadblocks === undefined || Array.isArray(o.roadblocks))
+    (o.roadblocks === undefined || Array.isArray(o.roadblocks)) &&
+    (o.submittals === undefined || Array.isArray(o.submittals)) &&
+    (o.journal === undefined || Array.isArray(o.journal))
   );
 }

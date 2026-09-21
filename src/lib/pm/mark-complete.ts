@@ -18,8 +18,9 @@ export function markEntityComplete(
     | "updateProject"
     | "updateWorkPackage"
     | "updateRoadblock"
+    | "updateSubmittal"
   >,
-  entityType: LookaheadEntityType | "changeOrder" | "project",
+  entityType: LookaheadEntityType | "project",
   entityId: string,
 ) {
   switch (entityType) {
@@ -56,6 +57,9 @@ export function markEntityComplete(
     case "roadblock":
       store.updateRoadblock(entityId, { status: "Resolved" });
       break;
+    case "submittal":
+      store.updateSubmittal(entityId, { status: "Approved" });
+      break;
   }
 }
 
@@ -73,8 +77,9 @@ export function reopenEntity(
     | "updateProject"
     | "updateWorkPackage"
     | "updateRoadblock"
+    | "updateSubmittal"
   >,
-  entityType: LookaheadEntityType | "changeOrder" | "project",
+  entityType: LookaheadEntityType | "project",
   entityId: string,
 ) {
   switch (entityType) {
@@ -110,6 +115,9 @@ export function reopenEntity(
       break;
     case "roadblock":
       store.updateRoadblock(entityId, { status: "Open" });
+      break;
+    case "submittal":
+      store.updateSubmittal(entityId, { status: "Under Review" });
       break;
   }
 }

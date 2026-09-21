@@ -7,9 +7,11 @@ import {
   drawingSheetsApi,
   fabItemsApi,
   installItemsApi,
+  journalApi,
   projectsApi,
   rfisApi,
   roadblocksApi,
+  submittalsApi,
   tasksApi,
   workPackagesApi,
 } from "./api";
@@ -24,9 +26,11 @@ import {
   SEED_DRAWING_SHEETS,
   SEED_FAB,
   SEED_INSTALL,
+  SEED_JOURNAL,
   SEED_PROJECTS,
   SEED_RFIS,
   SEED_ROADBLOCKS,
+  SEED_SUBMITTALS,
   SEED_TASKS,
   SEED_WORK_PACKAGES,
 } from "./seed";
@@ -37,12 +41,14 @@ import type {
   DrawingSheet,
   FabItem,
   InstallItem,
+  JournalEntry,
   KpiSnapshot,
   LookaheadItem,
   Priority,
   Project,
   Rfi,
   Roadblock,
+  Submittal,
   Task,
   TrackerName,
   WorkPackage,
@@ -73,6 +79,8 @@ interface PmState {
   cos: ChangeOrder[];
   roadblocks: Roadblock[];
   tasks: Task[];
+  submittals: Submittal[];
+  journal: JournalEntry[];
   filterProjectId: string | "all";
   setFilterProjectId: (id: string | "all") => void;
 
@@ -116,6 +124,14 @@ interface PmState {
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
 
+  addSubmittal: (row: Omit<Submittal, "id">) => string;
+  updateSubmittal: (id: string, patch: Partial<Submittal>) => void;
+  deleteSubmittal: (id: string) => void;
+
+  addJournalEntry: (row: Omit<JournalEntry, "id">) => string;
+  updateJournalEntry: (id: string, patch: Partial<JournalEntry>) => void;
+  deleteJournalEntry: (id: string) => void;
+
   addRoadblock: (row: Omit<Roadblock, "id">) => string;
   updateRoadblock: (id: string, patch: Partial<Roadblock>) => void;
   deleteRoadblock: (id: string) => void;
@@ -135,6 +151,8 @@ const initial = {
   cos: SEED_COS,
   roadblocks: SEED_ROADBLOCKS,
   tasks: SEED_TASKS,
+  submittals: SEED_SUBMITTALS,
+  journal: SEED_JOURNAL,
   filterProjectId: "all" as const,
 };
 
@@ -269,6 +287,20 @@ export const usePmStore = create<PmState>()(
       const rfi = crudActions<"rfis", Rfi>(set, get, "rfis", "r", rfisApi);
       const co = crudActions<"cos", ChangeOrder>(set, get, "cos", "c", changeOrdersApi);
       const task = crudActions<"tasks", Task>(set, get, "tasks", "t", tasksApi);
+      const submittal = crudActions<"submittals", Submittal>(
+        set,
+        get,
+        "submittals",
+        "sb",
+        submittalsApi,
+      );
+      const journal = crudActions<"journal", JournalEntry>(
+        set,
+        get,
+        "journal",
+        "j",
+        journalApi,
+      );
       const roadblock = crudActions<"roadblocks", Roadblock>(
         set,
         get,
@@ -306,6 +338,8 @@ export const usePmStore = create<PmState>()(
           for (const r of s.install.filter((r) => r.projectId === id)) install.remove(r.id);
           for (const r of s.rfis.filter((r) => r.projectId === id)) rfi.remove(r.id);
           for (const r of s.cos.filter((r) => r.projectId === id)) co.remove(r.id);
+          for (const r of s.submittals.filter((r) => r.projectId === id)) submittal.remove(r.id);
+          for (const r of s.journal.filter((r) => r.projectId === id)) journal.remove(r.id);
           for (const r of s.roadblocks.filter((r) => r.projectId === id)) roadblock.remove(r.id);
           for (const r of s.tasks.filter((r) => r.projectId === id)) task.remove(r.id);
           project.remove(id);
@@ -368,6 +402,14 @@ export const usePmStore = create<PmState>()(
         updateTask: (id, patch) => task.update(id, patch),
         deleteTask: (id) => task.remove(id),
 
+        addSubmittal: (row) => submittal.add(row),
+        updateSubmittal: (id, patch) => submittal.update(id, patch),
+        deleteSubmittal: (id) => submittal.remove(id),
+
+        addJournalEntry: (row) => journal.add(row),
+        updateJournalEntry: (id, patch) => journal.update(id, patch),
+        deleteJournalEntry: (id) => journal.remove(id),
+
         addRoadblock: (row) => roadblock.add(row),
         updateRoadblock: (id, patch) => roadblock.update(id, patch),
         deleteRoadblock: (id) => roadblock.remove(id),
@@ -375,7 +417,7 @@ export const usePmStore = create<PmState>()(
         resetSeed: () => set({ ...initial }),
       };
     },
-    { name: "steel-pm-tracker-v6" },
+    { name: "steel-pm-tracker-v7" },
   ),
 );
 
@@ -395,6 +437,7 @@ export function computeKpis(state: {
   cos: ChangeOrder[];
   roadblocks: Roadblock[];
   tasks: Task[];
+  submittals: Submittal[];
 }): KpiSnapshot {
   const today = DEMO_TODAY;
   const end48 = addDays(today, 2);
@@ -437,6 +480,25 @@ export function computeKpis(state: {
     .filter((c) => ["Draft", "Submitted", "Under Review"].includes(c.status))
     .reduce((a, c) => a + c.cost, 0);
 
+  // A submittal is "open" until it comes back stamped Approved / Approved as
+  // Noted. Revise & Resubmit counts as OPEN — it's back in our court and still
+  // gating release to the shop.
+  const submittalOpen = (sb: Submittal) =>
+    sb.status !== "Approved" && sb.status !== "Approved as Noted";
+  const openSubmittals = state.submittals.filter(submittalOpen).length;
+  const overdueSubmittals = state.submittals.filter(
+    (sb) => submittalOpen(sb) && sb.dueBack && sb.dueBack < today,
+  ).length;
+  // What's sitting on US right now across the review-cycle trackers — the
+  // number to clear before chasing anyone else.
+  const ours = (bic: string) => bic.trim().toLowerCase() === "us";
+  const ballInCourtUs =
+    state.submittals.filter((sb) => submittalOpen(sb) && ours(sb.ballInCourt)).length +
+    state.rfis.filter((r) => r.status === "Open" && ours(r.ballInCourt)).length +
+    state.drawingSets.filter(
+      (d) => !isDoneStatus(d.status) && ours(d.ballInCourt),
+    ).length;
+
   const openRoadblocks = state.roadblocks.filter((r) => r.status === "Open").length;
   const overdueRoadblocks = state.roadblocks.filter(
     (r) => r.status === "Open" && r.resolvedDate && r.resolvedDate < today,
@@ -459,6 +521,9 @@ export function computeKpis(state: {
     due10d,
     openRoadblocks,
     overdueRoadblocks,
+    openSubmittals,
+    overdueSubmittals,
+    ballInCourtUs,
   };
 }
 
@@ -475,6 +540,7 @@ export function buildLookahead(
     cos: ChangeOrder[];
     roadblocks: Roadblock[];
     tasks: Task[];
+    submittals: Submittal[];
   },
   until: string,
 ): LookaheadItem[] {
@@ -616,6 +682,50 @@ export function buildLookahead(
       action: wp.plannedComplete && wp.plannedComplete <= until ? "Confirm complete" : "Confirm start",
       entityType: "workPackage",
       entityId: wp.id,
+    });
+  }
+
+  for (const c of state.cos) {
+    if (!c.decisionDue || c.decisionDue > until) continue;
+    if (c.status === "Implemented" || c.status === "Rejected") continue;
+    items.push({
+      projectCode: code(c.projectId),
+      tracker: "Change Orders",
+      id: c.coNumber,
+      description: `${c.description} · ${c.scheduleDays}d · $${c.cost.toLocaleString()}`,
+      owner: c.owner,
+      due: c.decisionDue,
+      status: c.status,
+      priority: c.decisionDue < today ? "High" : "Med",
+      action: c.status === "Draft" ? "Submit pricing" : "Chase decision",
+      entityType: "changeOrder",
+      entityId: c.id,
+    });
+  }
+
+  for (const sb of state.submittals) {
+    if (!sb.dueBack || sb.dueBack > until) continue;
+    if (sb.status === "Approved" || sb.status === "Approved as Noted") continue;
+    const ours = sb.ballInCourt.trim().toLowerCase() === "us";
+    items.push({
+      projectCode: code(sb.projectId),
+      tracker: "Submittals",
+      id: sb.submittalNumber,
+      description: `${sb.type} · ${sb.title}`,
+      owner: sb.ballInCourt || sb.owner,
+      due: sb.dueBack,
+      status: sb.status,
+      priority: sb.dueBack < today ? "High" : "Med",
+      action:
+        sb.status === "Not Submitted"
+          ? "Transmit package"
+          : sb.status === "Revise & Resubmit"
+            ? "Revise and resubmit"
+            : ours
+              ? "Close out"
+              : "Chase reviewer",
+      entityType: "submittal",
+      entityId: sb.id,
     });
   }
 

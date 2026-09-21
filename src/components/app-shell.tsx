@@ -13,13 +13,17 @@ import {
   ListTodo,
   Menu,
   MessageSquareWarning,
+  NotebookPen,
   PackageSearch,
   RotateCcw,
+  Send,
   Share2,
+  Sun,
   Truck,
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { PlannerNav } from "@/components/planner-nav";
 import { SyncStatusChip, WorkspaceSyncBootstrap } from "@/components/workspace-sync";
 import { NAV_ITEMS } from "@/lib/pm/constants";
 import { usePmStore } from "@/lib/pm/store";
@@ -43,6 +47,9 @@ const ICONS = {
   Clock,
   CalendarDays,
   Share2,
+  Send,
+  Sun,
+  NotebookPen,
 } as const;
 
 export function AppShell({
@@ -191,6 +198,7 @@ export function AppShell({
               <p className="truncate text-xs text-muted">{subtitle}</p>
             ) : null}
           </div>
+          <PlannerNav className="hidden shrink-0 lg:flex" />
           <div className="flex shrink-0 items-center gap-2">
             <div className="hidden sm:block">
               <SyncStatusChip />

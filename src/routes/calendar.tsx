@@ -32,11 +32,13 @@ function CalendarPage() {
   const rfis = usePmStore((s) => s.rfis);
   const cos = usePmStore((s) => s.cos);
   const tasks = usePmStore((s) => s.tasks);
+  const submittals = usePmStore((s) => s.submittals);
 
   const allEvents = useMemo(
     () =>
       buildCalendarEvents({
         projects,
+        submittals,
         drawingSets,
         drawingSheets,
         fab,
@@ -56,6 +58,7 @@ function CalendarPage() {
       rfis,
       cos,
       tasks,
+      submittals,
     ],
   );
 

@@ -90,6 +90,8 @@ export function snapshotFromStore(): PmSnapshot {
     cos: s.cos,
     roadblocks: s.roadblocks,
     tasks: s.tasks,
+    submittals: s.submittals,
+    journal: s.journal,
   };
 }
 
@@ -107,6 +109,8 @@ export function applySnapshot(data: PmSnapshot) {
     cos: data.cos,
     roadblocks: data.roadblocks ?? [],
     tasks: data.tasks,
+    submittals: data.submittals ?? [],
+    journal: data.journal ?? [],
   });
 }
 

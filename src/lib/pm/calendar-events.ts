@@ -8,6 +8,7 @@ import type {
   InstallItem,
   Project,
   Rfi,
+  Submittal,
   Task,
   TrackerName,
 } from "./types";
@@ -18,7 +19,8 @@ export type CalendarEventKind =
   | "ship"
   | "arrival"
   | "erect"
-  | "issued";
+  | "issued"
+  | "returned";
 
 export type CalendarEntityType =
   | "drawingSet"
@@ -27,7 +29,9 @@ export type CalendarEntityType =
   | "delivery"
   | "install"
   | "rfi"
-  | "task";
+  | "task"
+  | "submittal"
+  | "changeOrder";
 
 export interface CalendarEvent {
   id: string;
@@ -47,6 +51,7 @@ export interface CalendarEvent {
 
 export const TRACKER_FILTERS: TrackerName[] = [
   "Drawings",
+  "Submittals",
   "Fabrication",
   "Delivery",
   "Installation",
@@ -76,6 +81,10 @@ export function completeStatusFor(entityType: CalendarEntityType): string {
       return "Closed";
     case "task":
       return "Complete";
+    case "submittal":
+      return "Approved";
+    case "changeOrder":
+      return "Implemented";
     default:
       return "Complete";
   }
@@ -83,6 +92,7 @@ export function completeStatusFor(entityType: CalendarEntityType): string {
 
 export function buildCalendarEvents(state: {
   projects: Project[];
+  submittals: Submittal[];
   drawingSets: DrawingSet[];
   drawingSheets: DrawingSheet[];
   fab: FabItem[];
@@ -267,7 +277,96 @@ export function buildCalendarEvents(state: {
     }
   }
 
-  void state.cos;
+  for (const sb of state.submittals) {
+    if (sb.dueBack) {
+      events.push({
+        id: `sub-due-${sb.id}`,
+        date: sb.dueBack,
+        projectId: sb.projectId,
+        projectCode: code(sb.projectId),
+        tracker: "Submittals",
+        kind: "due",
+        title: sb.submittalNumber || sb.type,
+        subtitle: `${sb.type} due back · ${sb.ballInCourt || "—"}`,
+        status: sb.status,
+        owner: sb.ballInCourt || sb.owner,
+        href: "/submittals",
+        entityType: "submittal",
+        entityId: sb.id,
+      });
+    }
+    if (sb.submitted) {
+      events.push({
+        id: `sub-sent-${sb.id}`,
+        date: sb.submitted,
+        projectId: sb.projectId,
+        projectCode: code(sb.projectId),
+        tracker: "Submittals",
+        kind: "issued",
+        title: sb.submittalNumber || sb.type,
+        subtitle: `Transmitted · ${sb.title}`,
+        status: sb.status,
+        owner: sb.owner,
+        href: "/submittals",
+        entityType: "submittal",
+        entityId: sb.id,
+      });
+    }
+    if (sb.returned) {
+      events.push({
+        id: `sub-ret-${sb.id}`,
+        date: sb.returned,
+        projectId: sb.projectId,
+        projectCode: code(sb.projectId),
+        tracker: "Submittals",
+        kind: "returned",
+        title: sb.submittalNumber || sb.type,
+        subtitle: `Returned ${sb.status}`,
+        status: sb.status,
+        owner: sb.owner,
+        href: "/submittals",
+        entityType: "submittal",
+        entityId: sb.id,
+      });
+    }
+  }
+
+  for (const c of state.cos) {
+    if (c.decisionDue) {
+      events.push({
+        id: `co-due-${c.id}`,
+        date: c.decisionDue,
+        projectId: c.projectId,
+        projectCode: code(c.projectId),
+        tracker: "Change Orders",
+        kind: "due",
+        title: c.coNumber,
+        subtitle: `Decision due · ${c.description}`,
+        status: c.status,
+        owner: c.owner,
+        href: "/changes",
+        entityType: "changeOrder",
+        entityId: c.id,
+      });
+    }
+    if (c.submitted) {
+      events.push({
+        id: `co-sub-${c.id}`,
+        date: c.submitted,
+        projectId: c.projectId,
+        projectCode: code(c.projectId),
+        tracker: "Change Orders",
+        kind: "issued",
+        title: c.coNumber,
+        subtitle: `Pricing submitted · ${c.description}`,
+        status: c.status,
+        owner: c.owner,
+        href: "/changes",
+        entityType: "changeOrder",
+        entityId: c.id,
+      });
+    }
+  }
 
   for (const t of state.tasks) {
     if (!t.due) continue;
@@ -327,6 +426,8 @@ export function trackerColor(tracker: TrackerName): string {
       return "bg-status-red/20 text-status-red border-status-red/30";
     case "Change Orders":
       return "bg-status-green/20 text-status-green border-status-green/30";
+    case "Submittals":
+      return "bg-accent-steel/25 text-accent-steel border-accent-steel/40";
     case "Tasks":
       return "bg-status-gray/20 text-status-gray border-status-gray/30";
     default:

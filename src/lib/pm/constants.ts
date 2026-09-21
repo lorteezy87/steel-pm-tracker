@@ -10,6 +10,8 @@ import type {
   RoadblockCategory,
   RoadblockImpact,
   RoadblockStatus,
+  SubmittalStatus,
+  SubmittalType,
   TaskStatus,
   WorkPackageStatus,
 } from "./types";
@@ -68,6 +70,39 @@ export const CO_STATUSES: CoStatus[] = [
   "Implemented",
 ];
 
+export const SUBMITTAL_STATUSES: SubmittalStatus[] = [
+  "Not Submitted",
+  "Submitted",
+  "Under Review",
+  "Approved",
+  "Approved as Noted",
+  "Revise & Resubmit",
+  "Rejected",
+];
+
+export const SUBMITTAL_TYPES: SubmittalType[] = [
+  "Shop Drawings",
+  "Erection Drawings",
+  "Anchor Bolt Plan",
+  "Embed Plan",
+  "Mill Certs",
+  "Welder Quals",
+  "WPS / PQR",
+  "Bolt Certs",
+  "Paint / Coating",
+  "Galvanizing",
+  "Joists / Girders",
+  "Metal Deck",
+  "Grating / Handrail",
+  "Stairs",
+  "Erection Plan",
+  "Rigging / Lift Plan",
+  "Other",
+];
+
+/** Who we're waiting on. Drives the "ball in court" split on the Today view. */
+export const BALL_IN_COURT = ["Us", "GC", "EOR", "Architect", "Owner", "Vendor"] as const;
+
 export const TASK_STATUSES: TaskStatus[] = [
   "Not Started",
   "In Progress",
@@ -121,6 +156,7 @@ export function statusTone(status: string): "gray" | "blue" | "yellow" | "green"
     s === "blocked" ||
     s === "rejected" ||
     s === "r&r" ||
+    s === "revise & resubmit" ||
     s === "cancelled"
   )
     return "red";
@@ -168,12 +204,26 @@ export const TONE_CLASSES: Record<ReturnType<typeof statusTone>, string> = {
   red: "bg-status-red/20 text-status-red border-status-red/30",
 };
 
+/**
+ * The five top-level planner views (the floating pill nav). These are the
+ * day-to-day driving surfaces; NAV_ITEMS below is the per-tracker drill-down.
+ */
+export const PLANNER_NAV = [
+  { to: "/daily", label: "Today", icon: "Sun" as const },
+  { to: "/timeline", label: "Timeline", icon: "GanttChartSquare" as const },
+  { to: "/planner", label: "Planner", icon: "CalendarRange" as const },
+  { to: "/journal", label: "Journal", icon: "NotebookPen" as const },
+  { to: "/lists", label: "Lists", icon: "ListTree" as const },
+] as const;
+
 export const NAV_ITEMS = [
-  { to: "/", label: "KPI Board", icon: "LayoutDashboard" as const },
+  { to: "/", label: "Command Center", icon: "LayoutDashboard" as const },
+  { to: "/daily", label: "Today", icon: "Sun" as const },
   { to: "/calendar", label: "Calendar", icon: "CalendarRange" as const },
   { to: "/projects", label: "Projects", icon: "Building2" as const },
   { to: "/work-packages", label: "Work Packages", icon: "PackageSearch" as const },
-  { to: "/drawings", label: "Drawings", icon: "FileStack" as const },
+  { to: "/drawings", label: "Detailing", icon: "FileStack" as const },
+  { to: "/submittals", label: "Submittals", icon: "Send" as const },
   { to: "/fabrication", label: "Fabrication", icon: "Hammer" as const },
   { to: "/delivery", label: "Delivery", icon: "Truck" as const },
   { to: "/installation", label: "Installation", icon: "HardHat" as const },
@@ -181,6 +231,7 @@ export const NAV_ITEMS = [
   { to: "/changes", label: "Change Orders", icon: "FilePenLine" as const },
   { to: "/roadblocks", label: "Roadblocks", icon: "AlertTriangle" as const },
   { to: "/tasks", label: "Tasks", icon: "ListTodo" as const },
+  { to: "/journal", label: "Field Journal", icon: "NotebookPen" as const },
   { to: "/lookahead-48h", label: "48h Lookahead", icon: "Clock" as const },
   { to: "/lookahead-10d", label: "10d Lookahead", icon: "CalendarDays" as const },
   { to: "/access", label: "Team Access", icon: "Share2" as const },

@@ -12,9 +12,11 @@ import type {
   DrawingSheet,
   FabItem,
   InstallItem,
+  JournalEntry,
   Project,
   Rfi,
   Roadblock,
+  Submittal,
   Task,
   WorkPackage,
 } from "@/lib/pm/types";
@@ -30,6 +32,8 @@ import { createRfi, deleteRfi, updateRfi } from "./rfis";
 import { createChangeOrder, deleteChangeOrder, updateChangeOrder } from "./change-orders";
 import { createRoadblock, deleteRoadblock, updateRoadblock } from "./roadblocks";
 import { createTask, deleteTask, updateTask } from "./tasks";
+import { createSubmittal, deleteSubmittal, updateSubmittal } from "./submittals";
+import { createJournalEntry, deleteJournalEntry, updateJournalEntry } from "./journal";
 
 /** Adapts a {create,update,delete}ServerFn triplet to `EntityMutationApi`. */
 function api<T extends { id: string }>(fns: {
@@ -108,4 +112,16 @@ export const tasksApi = api<Task>({
   create: createTask,
   update: updateTask,
   remove: deleteTask,
+});
+
+export const submittalsApi = api<Submittal>({
+  create: createSubmittal,
+  update: updateSubmittal,
+  remove: deleteSubmittal,
+});
+
+export const journalApi = api<JournalEntry>({
+  create: createJournalEntry,
+  update: updateJournalEntry,
+  remove: deleteJournalEntry,
 });

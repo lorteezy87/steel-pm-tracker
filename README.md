@@ -1,12 +1,51 @@
 # Steel PM Multi-Project Tracker
 
-Lightweight multi-project tracker for structural steel fabrication & erection PMs.
+Multi-project tracker for structural steel fabrication & erection PMs, covering the
+full chain — **detailing → submittals → fabrication → delivery → installation** —
+alongside the paperwork that gates it (RFIs, change orders, roadblocks).
+
+## The five planner views
+
+The floating pill nav in the header carries the day-to-day surfaces. Every one of
+them reads from the same tracker records — there is no separate "planner" data to
+keep in step.
+
+| View | What it answers |
+| --- | --- |
+| **Today** (`/daily`) | What is on the board this morning / afternoon / evening, what is past due (with one-tap push to tomorrow), and what is sitting in *our* court |
+| **Timeline** (`/timeline`) | The same day on a clock, with overlapping items in side-by-side lanes and the unbooked stretches called out |
+| **Planner** (`/planner`) | A year of month grids with ISO week numbers and one dot per tracker per day — where the pressure is, months out |
+| **Journal** (`/journal`) | Daily erection log: crew, man-hours, tons set, weather, delays — the record a delay claim or time-impact CO gets built from |
+| **Lists** (`/lists`) | Every open item, sliced by project or by smart list (Outstanding / Overdue / Ball in our court), grouped by tracker |
+
+Nothing in the tracker carries a time of day — a delivery has a date, not a 7:15 AM.
+Rather than make every row key in a meaningless time, each event kind gets the slot it
+actually occupies in a steel PM's day (trucks out at first light, crew on steel all
+morning, reviews midday, office follow-up in the afternoon). See
+`src/lib/pm/day-plan.ts`.
+
+## Trackers
+
+Detailing (drawing sets → sheets), **Submittals**, Work Packages, Fabrication,
+Delivery, Installation, RFIs, Change Orders, Roadblocks, Tasks, and the **Field
+Journal**. Each has its own page with full CRUD under `src/routes/`.
+
+**Submittals vs. Detailing** are deliberately separate trackers: a drawing set tracks
+the detailing deliverable sheet by sheet, while a submittal is the contractual
+transmittal that carries a package to the GC/EOR and comes back stamped (spec section,
+revision, due back, ball in court). `linkedDrawingSet` ties the two together. A
+submittal returned **Revise & Resubmit** stays on the open list — it is back in our
+court and still gating release to the shop.
+
+Change orders carry `submitted` and `decisionDue` dates so they appear on the schedule
+like everything else; an undecided CO past its decision date flags red.
 
 ## Data model
 
 Tracker data lives in real per-record Postgres tables (`migrations/0003_entities.sql`) —
 one table per entity (`projects`, `work_packages`, `drawing_sets`, `drawing_sheets`,
-`fab_items`, `deliveries`, `install_items`, `rfis`, `change_orders`, `roadblocks`, `tasks`).
+`fab_items`, `deliveries`, `install_items`, `rfis`, `change_orders`, `roadblocks`,
+`tasks`, `submittals`, `journal_entries`).
 This is a **shared, single-company tool** (S&H Steel): every signed-in user reads and
 writes the SAME shared rows — there is no per-user data isolation. `created_by` /
 `updated_by` columns exist for audit trail only.

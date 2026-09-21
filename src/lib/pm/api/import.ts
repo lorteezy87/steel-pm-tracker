@@ -14,6 +14,8 @@ import { RFIS } from "./rfis.table";
 import { CHANGE_ORDERS } from "./change-orders.table";
 import { ROADBLOCKS } from "./roadblocks.table";
 import { TASKS } from "./tasks.table";
+import { SUBMITTALS } from "./submittals.table";
+import { JOURNAL_ENTRIES } from "./journal.table";
 
 /**
  * One-time snapshot import — the "one-time import path" referenced in
@@ -99,6 +101,8 @@ export async function importSnapshotGaps(
   result.cos = await fillGaps(CHANGE_ORDERS, data.cos, userId);
   result.roadblocks = await fillGaps(ROADBLOCKS, data.roadblocks ?? [], userId);
   result.tasks = await fillGaps(TASKS, data.tasks, userId);
+  result.submittals = await fillGaps(SUBMITTALS, data.submittals ?? [], userId);
+  result.journal = await fillGaps(JOURNAL_ENTRIES, data.journal ?? [], userId);
   return result;
 }
 
@@ -115,6 +119,8 @@ export async function readFullSnapshot(): Promise<PmSnapshot> {
     cos,
     roadblocks,
     tasks,
+    submittals,
+    journal,
   ] = await Promise.all([
     listEntities(PROJECTS, "code asc"),
     listEntities(WORK_PACKAGES, "code asc"),
@@ -127,6 +133,8 @@ export async function readFullSnapshot(): Promise<PmSnapshot> {
     listEntities(CHANGE_ORDERS),
     listEntities(ROADBLOCKS),
     listEntities(TASKS),
+    listEntities(SUBMITTALS),
+    listEntities(JOURNAL_ENTRIES, "entry_date desc"),
   ]);
   return {
     projects,
@@ -140,6 +148,8 @@ export async function readFullSnapshot(): Promise<PmSnapshot> {
     cos,
     roadblocks,
     tasks,
+    submittals,
+    journal,
   };
 }
 

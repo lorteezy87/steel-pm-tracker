@@ -1,0 +1,18 @@
+# Netlify build config for the planner app.
+#
+# The Vite/Nitro build selects its preset from the NETLIFY env var Netlify sets
+# (see vite.config.ts), so this file only has to name the command and the
+# directory that preset publishes. `dist/` carries `_headers` and `_redirects`,
+# which is what Netlify's "Header rules" / "Redirect rules" checks read.
+#
+# The repo-root netlify.toml points the existing site at this app via
+# base = "apps/planner", so these values are what that build resolves to. This
+# file also stands alone for a site configured with base = "apps/planner"
+# directly in the Netlify UI.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Keep in step with the toolchain pin in the repo-root netlify.toml.
+[build.environment]
+  NODE_VERSION = "22"

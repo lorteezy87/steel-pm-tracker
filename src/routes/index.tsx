@@ -24,7 +24,7 @@ function Dashboard() {
 
   return (
     <AppShell
-      title="KPI Board"
+      title="Command Center"
       subtitle={`Live snapshot · demo date ${DEMO_TODAY}`}
     >
       <div className="mx-auto max-w-7xl space-y-6">

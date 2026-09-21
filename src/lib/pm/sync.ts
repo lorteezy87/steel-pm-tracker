@@ -92,6 +92,9 @@ export function snapshotFromStore(): PmSnapshot {
     tasks: s.tasks,
     submittals: s.submittals,
     journal: s.journal,
+    notes: s.notes,
+    tags: s.tags,
+    entityTags: s.entityTags,
   };
 }
 
@@ -111,6 +114,9 @@ export function applySnapshot(data: PmSnapshot) {
     tasks: data.tasks,
     submittals: data.submittals ?? [],
     journal: data.journal ?? [],
+    notes: data.notes ?? [],
+    tags: data.tags ?? [],
+    entityTags: data.entityTags ?? [],
   });
 }
 

@@ -317,6 +317,51 @@ export interface JournalEntry {
   author: string;
 }
 
+/** Fixed palette so a tag's color is a token, not free-form CSS. */
+export type TagColor =
+  | "steel"
+  | "blue"
+  | "green"
+  | "yellow"
+  | "red"
+  | "purple"
+  | "gray";
+
+export interface Tag {
+  id: string;
+  name: string;
+  color: TagColor;
+}
+
+/**
+ * Polymorphic tag attachment. `entityType` is a `TaggableType` value and
+ * `entityId` the record's id — see migrations/0007_notes_tags.sql for why this
+ * carries no foreign key.
+ */
+export interface EntityTag {
+  id: string;
+  tagId: string;
+  entityType: string;
+  entityId: string;
+}
+
+/**
+ * One record behind three surfaces — Inbox (untriaged), journal moments
+ * (dated), and Notes (all of them). `projectId` may be empty: a capture made in
+ * the field often isn't attached to a job yet.
+ */
+export interface Note {
+  id: string;
+  projectId: string;
+  noteDate: string;
+  noteTime: string;
+  title: string;
+  body: string;
+  pinned: boolean;
+  triaged: boolean;
+  author: string;
+}
+
 export type TrackerName =
   | "Drawings"
   | "Fabrication"
@@ -342,6 +387,9 @@ export type LookaheadEntityType =
   | "submittal"
   | "changeOrder";
 
+/** Anything a tag can hang on. */
+export type TaggableType = LookaheadEntityType | "note" | "project";
+
 export interface LookaheadItem {
   projectCode: string;
   tracker: TrackerName;
@@ -354,6 +402,13 @@ export interface LookaheadItem {
   action: string;
   entityType: LookaheadEntityType;
   entityId: string;
+  /**
+   * Who the item is waiting on, for the trackers that HAVE a review cycle
+   * (detailing, submittals, RFIs, change orders, roadblocks). Empty for
+   * internal execution work like fab, delivery, install and tasks — those are
+   * staffed, not awaited, and `owner` there is our own crew, not a counterparty.
+   */
+  ballInCourt: string;
 }
 
 export interface KpiSnapshot {

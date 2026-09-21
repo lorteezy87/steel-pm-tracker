@@ -3,13 +3,16 @@ import type {
   Delivery,
   DrawingSet,
   DrawingSheet,
+  EntityTag,
   FabItem,
   InstallItem,
   JournalEntry,
+  Note,
   Project,
   Rfi,
   Roadblock,
   Submittal,
+  Tag,
   Task,
   WorkPackage,
 } from "./types";
@@ -792,6 +795,93 @@ export const SEED_JOURNAL: JournalEntry[] = [
     deliveriesReceived: "",
     visitors: "EOR field rep on site 09:00–11:00.",
     safetyNotes: "No incidents.",
+    author: "Nick L.",
+  },
+];
+
+
+/**
+ * Tags cut across trackers the way real job talk does — a grid line, a
+ * sequence, a long-lead item — so one label pulls together the RFI, the
+ * submittal and the field note that all concern the same problem.
+ */
+export const SEED_TAGS: Tag[] = [
+  { id: "tg1", name: "Grid C", color: "red" },
+  { id: "tg2", name: "Long Lead", color: "yellow" },
+  { id: "tg3", name: "Sequence 1", color: "blue" },
+  { id: "tg4", name: "Anchor Bolts", color: "purple" },
+  { id: "tg5", name: "Claim Support", color: "green" },
+];
+
+export const SEED_ENTITY_TAGS: EntityTag[] = [
+  { id: "et1", tagId: "tg4", entityType: "rfi", entityId: "r1" },
+  { id: "et2", tagId: "tg1", entityType: "rfi", entityId: "r1" },
+  { id: "et3", tagId: "tg2", entityType: "submittal", entityId: "sb5" },
+  { id: "et4", tagId: "tg3", entityType: "submittal", entityId: "sb1" },
+  { id: "et5", tagId: "tg1", entityType: "note", entityId: "n1" },
+  { id: "et6", tagId: "tg4", entityType: "note", entityId: "n1" },
+  { id: "et7", tagId: "tg5", entityType: "note", entityId: "n2" },
+];
+
+/**
+ * Notes span the three surfaces the table backs: untriaged field captures
+ * (Inbox), dated moments that land on the Journal timeline, and undated
+ * reference notes.
+ */
+export const SEED_NOTES: Note[] = [
+  {
+    id: "n1",
+    projectId: "p2",
+    noteDate: "2026-08-01",
+    noteTime: "09:40",
+    title: "AB at grid C looks off",
+    body: "Three anchor bolts at grid C read ~3/4 in out of position off the control line. Need survey before we swing columns. Photo on phone.",
+    pinned: false,
+    triaged: false,
+    author: "Nick L.",
+  },
+  {
+    id: "n2",
+    projectId: "p1",
+    noteDate: "2026-07-31",
+    noteTime: "15:05",
+    title: "Lightning hold — crew off steel",
+    body: "Logged the hold with the GC super at the time it was called. Backs up the 2.5 hr crane-down entry in the journal.",
+    pinned: true,
+    triaged: true,
+    author: "Nick L.",
+  },
+  {
+    id: "n3",
+    projectId: "",
+    noteDate: "",
+    noteTime: "",
+    title: "Call the joist rep re: canopy bridging",
+    body: "Came off the SUB-101 R&R. No job attached yet — triage this.",
+    pinned: false,
+    triaged: false,
+    author: "Nick L.",
+  },
+  {
+    id: "n4",
+    projectId: "p1",
+    noteDate: "",
+    noteTime: "",
+    title: "Coordination call notes — 7/29",
+    body: "GC wants Sequence 2 steel on site the week of 8/24. Confirmed shop can hit it IF the paint submittal (SUB-006) clears by 8/13. Flagged the dependency to the architect.",
+    pinned: true,
+    triaged: true,
+    author: "Nick L.",
+  },
+  {
+    id: "n5",
+    projectId: "p1",
+    noteDate: "2026-08-01",
+    noteTime: "11:20",
+    title: "Bay 1 plumbed and bolted",
+    body: "Walked it with the super — no rework. Moving to perimeter beams line A.",
+    pinned: false,
+    triaged: true,
     author: "Nick L.",
   },
 ];

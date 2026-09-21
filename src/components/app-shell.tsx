@@ -13,12 +13,17 @@ import {
   ListTodo,
   Menu,
   MessageSquareWarning,
+  Inbox,
+  ListTree,
   NotebookPen,
   PackageSearch,
   RotateCcw,
   Send,
   Share2,
+  Sparkles,
+  StickyNote,
   Sun,
+  Tag as TagIcon,
   Truck,
   X,
 } from "lucide-react";
@@ -50,6 +55,11 @@ const ICONS = {
   Send,
   Sun,
   NotebookPen,
+  Sparkles,
+  Inbox,
+  StickyNote,
+  TagIcon,
+  ListTree,
 } as const;
 
 export function AppShell({

@@ -16,6 +16,8 @@ import { ROADBLOCKS } from "./roadblocks.table";
 import { TASKS } from "./tasks.table";
 import { SUBMITTALS } from "./submittals.table";
 import { JOURNAL_ENTRIES } from "./journal.table";
+import { NOTES } from "./notes.table";
+import { ENTITY_TAGS, TAGS } from "./tags.table";
 
 /**
  * One-time snapshot import — the "one-time import path" referenced in
@@ -103,6 +105,10 @@ export async function importSnapshotGaps(
   result.tasks = await fillGaps(TASKS, data.tasks, userId);
   result.submittals = await fillGaps(SUBMITTALS, data.submittals ?? [], userId);
   result.journal = await fillGaps(JOURNAL_ENTRIES, data.journal ?? [], userId);
+  result.notes = await fillGaps(NOTES, data.notes ?? [], userId);
+  // Tags before their attachments, so the entity_tags FK never races.
+  result.tags = await fillGaps(TAGS, data.tags ?? [], userId);
+  result.entityTags = await fillGaps(ENTITY_TAGS, data.entityTags ?? [], userId);
   return result;
 }
 
@@ -121,6 +127,9 @@ export async function readFullSnapshot(): Promise<PmSnapshot> {
     tasks,
     submittals,
     journal,
+    notes,
+    tags,
+    entityTags,
   ] = await Promise.all([
     listEntities(PROJECTS, "code asc"),
     listEntities(WORK_PACKAGES, "code asc"),
@@ -135,6 +144,9 @@ export async function readFullSnapshot(): Promise<PmSnapshot> {
     listEntities(TASKS),
     listEntities(SUBMITTALS),
     listEntities(JOURNAL_ENTRIES, "entry_date desc"),
+    listEntities(NOTES, "created_at desc"),
+    listEntities(TAGS, "name asc"),
+    listEntities(ENTITY_TAGS),
   ]);
   return {
     projects,
@@ -150,6 +162,9 @@ export async function readFullSnapshot(): Promise<PmSnapshot> {
     tasks,
     submittals,
     journal,
+    notes,
+    tags,
+    entityTags,
   };
 }
 

@@ -2,11 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Building2, Flame, Inbox, ListTree, UserCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { CompleteCheck } from "@/components/complete-check";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { ItemRow } from "@/components/item-row";
 import { isDoneStatus } from "@/lib/pm/complete";
 import { trackerColor } from "@/lib/pm/calendar-events";
-import { markEntityComplete, reopenEntity } from "@/lib/pm/mark-complete";
 import { buildLookahead, DEMO_TODAY, usePmStore } from "@/lib/pm/store";
 import type { LookaheadItem, TrackerName } from "@/lib/pm/types";
 import { cn } from "@/lib/utils";
@@ -40,10 +38,10 @@ function ListsPage() {
     [open],
   );
 
-  // "On us" reads the owner column buildLookahead filled from each record's
-  // ball-in-court field, so it stays in step with the trackers themselves.
+  // Keyed off `ballInCourt`, not `owner` — `owner` is our own staff on the
+  // execution trackers, so it would sweep in everything Nick is assigned.
   const ours = useMemo(
-    () => open.filter((i) => i.owner.trim().toLowerCase() === "us"),
+    () => open.filter((i) => i.ballInCourt.trim().toLowerCase() === "us"),
     [open],
   );
 
@@ -182,42 +180,6 @@ function GroupedItems({ items }: { items: LookaheadItem[] }) {
         </div>
       ))}
     </div>
-  );
-}
-
-function ItemRow({ item }: { item: LookaheadItem }) {
-  const overdue = !!item.due && item.due < DEMO_TODAY;
-  return (
-    <li className="flex items-start gap-3 rounded-md px-1 py-1.5 hover:bg-surface-2">
-      <div className="pt-0.5">
-        <CompleteCheck
-          status={item.status}
-          onComplete={() =>
-            markEntityComplete(usePmStore.getState(), item.entityType, item.entityId)
-          }
-          onReopen={() =>
-            reopenEntity(usePmStore.getState(), item.entityType, item.entityId)
-          }
-        />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm text-fg">
-          <span className="font-medium">{item.id}</span>
-          <span className="text-muted"> · {item.description}</span>
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
-          <span className="tabular font-semibold text-accent-steel">
-            {item.projectCode}
-          </span>
-          <span className={cn("tabular", overdue ? "font-semibold text-status-red" : "text-muted")}>
-            {item.due || "no date"}
-          </span>
-          <span className="text-subtle">{item.action}</span>
-          {item.owner ? <span className="text-subtle">· {item.owner}</span> : null}
-        </div>
-      </div>
-      <StatusBadge status={item.status} />
-    </li>
   );
 }
 

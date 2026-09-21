@@ -5,19 +5,23 @@ import {
   deliveriesApi,
   drawingSetsApi,
   drawingSheetsApi,
+  entityTagsApi,
   fabItemsApi,
   installItemsApi,
   journalApi,
+  notesApi,
   projectsApi,
   rfisApi,
   roadblocksApi,
   submittalsApi,
+  tagsApi,
   tasksApi,
   workPackagesApi,
 } from "./api";
 import type { EntityMutationApi } from "./api/client-mutations";
 import { optimisticDelete, optimisticUpdate, persistCreate } from "./api/client-mutations";
 import { isDoneStatus } from "./complete";
+import { TAG_COLORS } from "./constants";
 import { newId } from "./id";
 import {
   SEED_COS,
@@ -26,11 +30,14 @@ import {
   SEED_DRAWING_SHEETS,
   SEED_FAB,
   SEED_INSTALL,
+  SEED_ENTITY_TAGS,
   SEED_JOURNAL,
+  SEED_NOTES,
   SEED_PROJECTS,
   SEED_RFIS,
   SEED_ROADBLOCKS,
   SEED_SUBMITTALS,
+  SEED_TAGS,
   SEED_TASKS,
   SEED_WORK_PACKAGES,
 } from "./seed";
@@ -40,15 +47,19 @@ import type {
   DrawingSet,
   DrawingSheet,
   FabItem,
+  EntityTag,
   InstallItem,
   JournalEntry,
   KpiSnapshot,
   LookaheadItem,
+  Note,
   Priority,
   Project,
   Rfi,
   Roadblock,
   Submittal,
+  Tag,
+  TaggableType,
   Task,
   TrackerName,
   WorkPackage,
@@ -81,6 +92,9 @@ interface PmState {
   tasks: Task[];
   submittals: Submittal[];
   journal: JournalEntry[];
+  notes: Note[];
+  tags: Tag[];
+  entityTags: EntityTag[];
   filterProjectId: string | "all";
   setFilterProjectId: (id: string | "all") => void;
 
@@ -132,6 +146,18 @@ interface PmState {
   updateJournalEntry: (id: string, patch: Partial<JournalEntry>) => void;
   deleteJournalEntry: (id: string) => void;
 
+  addNote: (row: Omit<Note, "id">) => string;
+  updateNote: (id: string, patch: Partial<Note>) => void;
+  deleteNote: (id: string) => void;
+
+  addTag: (row: Omit<Tag, "id">) => string;
+  updateTag: (id: string, patch: Partial<Tag>) => void;
+  deleteTag: (id: string) => void;
+
+  /** Attach/detach a tag on any record. Creates the tag by name if new. */
+  toggleTag: (entityType: TaggableType, entityId: string, tagName: string) => void;
+  detachTag: (entityType: TaggableType, entityId: string, tagId: string) => void;
+
   addRoadblock: (row: Omit<Roadblock, "id">) => string;
   updateRoadblock: (id: string, patch: Partial<Roadblock>) => void;
   deleteRoadblock: (id: string) => void;
@@ -153,6 +179,9 @@ const initial = {
   tasks: SEED_TASKS,
   submittals: SEED_SUBMITTALS,
   journal: SEED_JOURNAL,
+  notes: SEED_NOTES,
+  tags: SEED_TAGS,
+  entityTags: SEED_ENTITY_TAGS,
   filterProjectId: "all" as const,
 };
 
@@ -301,6 +330,15 @@ export const usePmStore = create<PmState>()(
         "j",
         journalApi,
       );
+      const note = crudActions<"notes", Note>(set, get, "notes", "n", notesApi);
+      const tag = crudActions<"tags", Tag>(set, get, "tags", "tg", tagsApi);
+      const entityTag = crudActions<"entityTags", EntityTag>(
+        set,
+        get,
+        "entityTags",
+        "et",
+        entityTagsApi,
+      );
       const roadblock = crudActions<"roadblocks", Roadblock>(
         set,
         get,
@@ -340,6 +378,7 @@ export const usePmStore = create<PmState>()(
           for (const r of s.cos.filter((r) => r.projectId === id)) co.remove(r.id);
           for (const r of s.submittals.filter((r) => r.projectId === id)) submittal.remove(r.id);
           for (const r of s.journal.filter((r) => r.projectId === id)) journal.remove(r.id);
+          for (const r of s.notes.filter((r) => r.projectId === id)) note.remove(r.id);
           for (const r of s.roadblocks.filter((r) => r.projectId === id)) roadblock.remove(r.id);
           for (const r of s.tasks.filter((r) => r.projectId === id)) task.remove(r.id);
           project.remove(id);
@@ -410,6 +449,60 @@ export const usePmStore = create<PmState>()(
         updateJournalEntry: (id, patch) => journal.update(id, patch),
         deleteJournalEntry: (id) => journal.remove(id),
 
+        addNote: (row) => note.add(row),
+        updateNote: (id, patch) => note.update(id, patch),
+        deleteNote: (id) => {
+          // Drop this note's tag attachments too — nothing else points at them.
+          for (const et of get().entityTags.filter(
+            (t) => t.entityType === "note" && t.entityId === id,
+          )) {
+            entityTag.remove(et.id);
+          }
+          note.remove(id);
+        },
+
+        addTag: (row) => tag.add(row),
+        updateTag: (id, patch) => tag.update(id, patch),
+        deleteTag: (id) => {
+          // `entity_tags.tag_id` cascades server-side; mirror it locally so the
+          // attachments disappear from the UI immediately too.
+          for (const et of get().entityTags.filter((t) => t.tagId === id)) {
+            entityTag.remove(et.id);
+          }
+          tag.remove(id);
+        },
+
+        toggleTag: (entityType, entityId, tagName) => {
+          const name = tagName.trim();
+          if (!name) return;
+          const s = get();
+          const existing = s.tags.find(
+            (t) => t.name.toLowerCase() === name.toLowerCase(),
+          );
+          const tagId = existing
+            ? existing.id
+            : tag.add({
+                name,
+                // Spread new tags across the palette instead of every tag
+                // landing on the same default color.
+                color: TAG_COLORS[s.tags.length % TAG_COLORS.length],
+              });
+          const attached = s.entityTags.find(
+            (t) =>
+              t.tagId === tagId && t.entityType === entityType && t.entityId === entityId,
+          );
+          if (attached) entityTag.remove(attached.id);
+          else entityTag.add({ tagId, entityType, entityId });
+        },
+
+        detachTag: (entityType, entityId, tagId) => {
+          const attached = get().entityTags.find(
+            (t) =>
+              t.tagId === tagId && t.entityType === entityType && t.entityId === entityId,
+          );
+          if (attached) entityTag.remove(attached.id);
+        },
+
         addRoadblock: (row) => roadblock.add(row),
         updateRoadblock: (id, patch) => roadblock.update(id, patch),
         deleteRoadblock: (id) => roadblock.remove(id),
@@ -417,7 +510,7 @@ export const usePmStore = create<PmState>()(
         resetSeed: () => set({ ...initial }),
       };
     },
-    { name: "steel-pm-tracker-v7" },
+    { name: "steel-pm-tracker-v8" },
   ),
 );
 
@@ -557,6 +650,7 @@ export function buildLookahead(
       id: set.name,
       description: `Set · ${set.description || set.type}`,
       owner: set.owner,
+      ballInCourt: set.ballInCourt,
       due: set.requiredBy,
       status: set.status,
       priority: set.requiredBy < today ? "High" : "Med",
@@ -577,6 +671,7 @@ export function buildLookahead(
       id: sh.numberRev,
       description: `${ds.name} · ${sh.description}`,
       owner: sh.ballInCourt || ds.owner,
+      ballInCourt: sh.ballInCourt || ds.ballInCourt,
       due: sh.requiredBy,
       status: sh.status,
       priority: sh.requiredBy < today ? "High" : "Med",
@@ -594,6 +689,7 @@ export function buildLookahead(
       id: f.workPackage,
       description: `${f.description} · ${f.qty} pcs · ${f.weightTons}t`,
       owner: f.owner,
+      ballInCourt: "",
       due: f.plannedDate,
       status: f.status,
       priority: f.pctComplete < 50 ? "High" : "Med",
@@ -610,6 +706,7 @@ export function buildLookahead(
       id: d.loadNumber,
       description: `Ship ${d.pieceMarks}`,
       owner: d.owner,
+      ballInCourt: "",
       due: d.plannedShip,
       status: d.status,
       priority: "High",
@@ -626,6 +723,7 @@ export function buildLookahead(
       id: i.sequenceArea,
       description: `Erect ${i.pieceMarks}`,
       owner: i.owner,
+      ballInCourt: "",
       due: i.plannedErect,
       status: i.status,
       priority: "Med",
@@ -642,6 +740,7 @@ export function buildLookahead(
       id: r.rfiNumber,
       description: r.subject,
       owner: r.ballInCourt,
+      ballInCourt: r.ballInCourt,
       due: r.responseDue,
       status: r.status,
       priority: r.status === "Open" ? "High" : "Low",
@@ -658,6 +757,7 @@ export function buildLookahead(
       id: t.category,
       description: t.task,
       owner: t.owner,
+      ballInCourt: "",
       due: t.due,
       status: t.status,
       priority: t.priority,
@@ -676,6 +776,7 @@ export function buildLookahead(
       id: wp.code,
       description: `${wp.name || wp.description} · ${wp.tonnage}t`,
       owner: wp.owner,
+      ballInCourt: "",
       due: dueDate,
       status: wp.status,
       priority: dueDate < today ? "High" : "Med",
@@ -694,6 +795,7 @@ export function buildLookahead(
       id: c.coNumber,
       description: `${c.description} · ${c.scheduleDays}d · $${c.cost.toLocaleString()}`,
       owner: c.owner,
+      ballInCourt: c.status === "Draft" ? "Us" : "GC",
       due: c.decisionDue,
       status: c.status,
       priority: c.decisionDue < today ? "High" : "Med",
@@ -713,6 +815,7 @@ export function buildLookahead(
       id: sb.submittalNumber,
       description: `${sb.type} · ${sb.title}`,
       owner: sb.ballInCourt || sb.owner,
+      ballInCourt: sb.ballInCourt,
       due: sb.dueBack,
       status: sb.status,
       priority: sb.dueBack < today ? "High" : "Med",
@@ -742,6 +845,7 @@ export function buildLookahead(
       id: rb.title,
       description: hasTarget ? rb.description : `${rb.description} · no target date`,
       owner: rb.ballInCourt || rb.owner,
+      ballInCourt: rb.ballInCourt,
       due: hasTarget ? rb.resolvedDate : today,
       status: rb.status,
       priority: rb.severity,
@@ -766,3 +870,17 @@ export function filterByProject<T extends { projectId: string }>(
 }
 
 export type { TrackerName };
+
+
+/** Tags attached to one record, resolved through `entityTags`. */
+export function tagsFor(
+  state: { tags: Tag[]; entityTags: EntityTag[] },
+  entityType: TaggableType,
+  entityId: string,
+): Tag[] {
+  const byId = new Map(state.tags.map((t) => [t.id, t]));
+  return state.entityTags
+    .filter((t) => t.entityType === entityType && t.entityId === entityId)
+    .map((t) => byId.get(t.tagId))
+    .filter((t): t is Tag => Boolean(t));
+}

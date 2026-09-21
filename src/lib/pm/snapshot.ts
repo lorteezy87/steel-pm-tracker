@@ -4,12 +4,15 @@ import type {
   DrawingSet,
   DrawingSheet,
   FabItem,
+  EntityTag,
   InstallItem,
   JournalEntry,
+  Note,
   Project,
   Rfi,
   Roadblock,
   Submittal,
+  Tag,
   Task,
   WorkPackage,
 } from "./types";
@@ -29,6 +32,9 @@ export type PmSnapshot = {
   tasks: Task[];
   submittals: Submittal[];
   journal: JournalEntry[];
+  notes: Note[];
+  tags: Tag[];
+  entityTags: EntityTag[];
 };
 
 export type WorkspaceResponse = {
@@ -57,6 +63,9 @@ export function isPmSnapshot(v: unknown): v is PmSnapshot {
     (o.workPackages === undefined || Array.isArray(o.workPackages)) &&
     (o.roadblocks === undefined || Array.isArray(o.roadblocks)) &&
     (o.submittals === undefined || Array.isArray(o.submittals)) &&
-    (o.journal === undefined || Array.isArray(o.journal))
+    (o.journal === undefined || Array.isArray(o.journal)) &&
+    (o.notes === undefined || Array.isArray(o.notes)) &&
+    (o.tags === undefined || Array.isArray(o.tags)) &&
+    (o.entityTags === undefined || Array.isArray(o.entityTags))
   );
 }

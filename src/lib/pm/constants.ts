@@ -12,6 +12,7 @@ import type {
   RoadblockStatus,
   SubmittalStatus,
   SubmittalType,
+  TagColor,
   TaskStatus,
   WorkPackageStatus,
 } from "./types";
@@ -145,6 +146,40 @@ export const ROADBLOCK_IMPACTS: RoadblockImpact[] = [
 
 export const ROADBLOCK_STATUSES: RoadblockStatus[] = ["Open", "Resolved"];
 
+export const TAG_COLORS: TagColor[] = [
+  "steel",
+  "blue",
+  "green",
+  "yellow",
+  "red",
+  "purple",
+  "gray",
+];
+
+/** Tag color token → border/background/text classes. */
+export const TAG_COLOR_CLASSES: Record<TagColor, string> = {
+  steel: "bg-accent-steel/20 text-accent-steel border-accent-steel/40",
+  blue: "bg-status-blue/20 text-status-blue border-status-blue/40",
+  green: "bg-status-green/20 text-status-green border-status-green/40",
+  yellow: "bg-status-yellow/20 text-status-yellow border-status-yellow/40",
+  red: "bg-status-red/20 text-status-red border-status-red/40",
+  purple: "bg-[#a78bfa]/20 text-[#a78bfa] border-[#a78bfa]/40",
+  gray: "bg-status-gray/20 text-status-gray border-status-gray/40",
+};
+
+/**
+ * The second row of the nav, behind the chevron — the reference app's
+ * Journal / Lists / Smart Lists / Notes / Tags strip.
+ */
+export const SECONDARY_NAV = [
+  { to: "/journal", label: "Journal", icon: "NotebookPen" as const },
+  { to: "/lists", label: "Lists", icon: "ListTree" as const },
+  { to: "/smart-lists", label: "Smart Lists", icon: "Sparkles" as const },
+  { to: "/inbox", label: "Inbox", icon: "Inbox" as const },
+  { to: "/notes", label: "Notes", icon: "StickyNote" as const },
+  { to: "/tags", label: "Tags", icon: "TagIcon" as const },
+] as const;
+
 /** Status → semantic color class tokens */
 export function statusTone(status: string): "gray" | "blue" | "yellow" | "green" | "red" {
   const s = status.toLowerCase();
@@ -232,6 +267,10 @@ export const NAV_ITEMS = [
   { to: "/roadblocks", label: "Roadblocks", icon: "AlertTriangle" as const },
   { to: "/tasks", label: "Tasks", icon: "ListTodo" as const },
   { to: "/journal", label: "Field Journal", icon: "NotebookPen" as const },
+  { to: "/smart-lists", label: "Smart Lists", icon: "Sparkles" as const },
+  { to: "/inbox", label: "Inbox", icon: "Inbox" as const },
+  { to: "/notes", label: "Notes", icon: "StickyNote" as const },
+  { to: "/tags", label: "Tags", icon: "TagIcon" as const },
   { to: "/lookahead-48h", label: "48h Lookahead", icon: "Clock" as const },
   { to: "/lookahead-10d", label: "10d Lookahead", icon: "CalendarDays" as const },
   { to: "/access", label: "Team Access", icon: "Share2" as const },

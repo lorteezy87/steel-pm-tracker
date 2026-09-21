@@ -1,5 +1,12 @@
 # Steel PM Multi-Project Tracker
 
+> **Two apps live in this repository.**
+> This README describes the original tracker at the repository root.
+> [`apps/planner`](apps/planner/README.md) is a **separate app** — the day
+> planner, with its own package, build and deploy. It shares this repo's
+> database and schema but no code: the root app is untouched by it and keeps
+> working on its own. See its README to run or deploy it.
+
 Multi-project tracker for structural steel fabrication & erection PMs, covering the
 full chain — **detailing → submittals → fabrication → delivery → installation** —
 alongside the paperwork that gates it (RFIs, change orders, roadblocks).

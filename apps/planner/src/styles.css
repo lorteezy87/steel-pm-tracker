@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0d0f12;
+  --color-surface: #14181e;
+  --color-surface-2: #1a2028;
+  --color-surface-3: #222a34;
+  --color-fg: #e8eaed;
+  --color-muted: #8b93a0;
+  --color-subtle: #5c6570;
+  --color-border: #2a323c;
+  --color-border-strong: #3a4552;
+  --color-primary: #3b82f6;
+  --color-primary-fg: #0d0f12;
+  --color-primary-dim: #2563eb;
+  --color-accent-steel: #6b8cae;
+  --color-status-gray: #94a3b8;
+  --color-status-blue: #60a5fa;
+  --color-status-yellow: #eab308;
+  --color-status-green: #4ade80;
+  --color-status-red: #f87171;
+  --color-danger: #ef4444;
+  --color-ring: #3b82f6;
+
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Hairline industrial grid on main canvas */
+  .forge-grid {
+    background-image:
+      linear-gradient(color-mix(in oklab, var(--color-border) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--color-border) 55%, transparent) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: -1px -1px;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

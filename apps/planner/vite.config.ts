@@ -119,6 +119,22 @@ function authPopupPlugin(): Plugin {
   };
 }
 
+/**
+ * Deploy target for the Nitro build.
+ *
+ * This was hardcoded to `vercel`, which emits `.vercel/output/` and no publish
+ * directory. When the repo was pointed at Netlify, its "Pages changed",
+ * "Header rules" and "Redirect rules" steps had nothing to read and the deploy
+ * preview failed on every commit. The `netlify` preset emits `dist/` (with the
+ * `_headers` / `_redirects` files those steps expect) plus the server function.
+ *
+ * Netlify sets `NETLIFY=true` during builds and Vercel does not, so each host
+ * gets its own preset with no per-branch configuration. `NITRO_PRESET`
+ * overrides both for anything else.
+ */
+const nitroPreset =
+  process.env.NITRO_PRESET ?? (process.env.NETLIFY ? "netlify" : "vercel");
+
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // Keep `nitro` gated to `build` (the Vercel deploy target): enabled in dev it
 // opens a second dev-server port, which breaks the single-port preview.
@@ -137,7 +153,7 @@ export default defineConfig(({ command }) => ({
     authPopupPlugin(),
     tailwindcss(),
     tanstackStart(),
-    ...(command === "build" ? [nitro({ preset: "vercel" })] : []),
+    ...(command === "build" ? [nitro({ preset: nitroPreset })] : []),
     viteReact(),
   ],
 }));

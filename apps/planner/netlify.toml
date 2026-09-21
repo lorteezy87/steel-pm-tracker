@@ -1,0 +1,12 @@
+# Netlify build config for the planner app.
+#
+# The Vite/Nitro build selects its preset from the NETLIFY env var Netlify sets
+# (see vite.config.ts), so this file only has to name the command and the
+# directory that preset publishes. `dist/` carries `_headers` and `_redirects`,
+# which is what Netlify's "Header rules" / "Redirect rules" checks read.
+#
+# This app deploys as its own Netlify site with base = "apps/planner"; it is not
+# built by the root site.
+[build]
+  command = "npm run build"
+  publish = "dist"

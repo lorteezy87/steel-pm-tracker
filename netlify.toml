@@ -1,0 +1,12 @@
+# Netlify build config for the root tracker app.
+#
+# The Vite/Nitro build selects its preset from the NETLIFY env var Netlify sets
+# (see vite.config.ts), so this file only has to name the command and the
+# directory that preset publishes. `dist/` carries `_headers` and `_redirects`,
+# which is what Netlify's "Header rules" / "Redirect rules" checks read.
+#
+# The planner app in apps/planner is a SEPARATE deploy: give it its own Netlify
+# site with base = "apps/planner" rather than adding it here.
+[build]
+  command = "npm run build"
+  publish = "dist"

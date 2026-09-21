@@ -108,7 +108,23 @@ async function createPgliteSql(): Promise<Sql> {
   // One in-memory instance per process, shared across HMR module instances, so
   // data survives source edits (it resets on dev-server restart).
   globalRef.__pgliteInstance__ ??= (async () => {
-    const { PGlite } = await import("@electric-sql/pglite");
+    // PGLite is Postgres compiled to WASM. It is a DEV/preview convenience: a
+    // serverless bundle does not carry its .wasm payload, so this import throws
+    // in production and the only real fix is to set DATABASE_URL. Say that
+    // plainly rather than surfacing an opaque WASM instantiation error.
+    let PGlite: typeof import("@electric-sql/pglite").PGlite;
+    try {
+      ({ PGlite } = await import("@electric-sql/pglite"));
+    } catch (err) {
+      throw new Error(
+        "No DATABASE_URL is set, and the embedded PGLite fallback cannot run in " +
+          "this environment (its WASM payload is not part of a serverless " +
+          "bundle). Set DATABASE_URL to a Postgres connection string — e.g. a " +
+          "Neon database — on the deployment. " +
+          `Underlying error: ${err instanceof Error ? err.message : String(err)}`,
+        { cause: err },
+      );
+    }
     const pg = new PGlite({
       parsers: {
         [OID_INT8]: Number,

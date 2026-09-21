@@ -133,7 +133,18 @@ export async function pullWorkspace(): Promise<boolean> {
   setStatus("loading");
   try {
     const res = await fetch("/api/pm/workspace", { cache: "no-store" });
-    if (!res.ok) throw new Error(`Load failed (${res.status})`);
+    if (!res.ok) {
+      // The route reports WHY it failed in `detail` (see
+      // src/routes/api/pm/workspace.ts). Throwing a bare status here dropped
+      // it on the floor, so a misconfigured deployment showed only
+      // "Offline · local only" with "Load failed (500)" behind a tooltip —
+      // no hint that the cause was an unset DATABASE_URL.
+      const detail = await res
+        .json()
+        .then((b: { detail?: string; error?: string }) => b.detail ?? b.error)
+        .catch(() => undefined);
+      throw new Error(detail ? `Load failed (${res.status}): ${detail}` : `Load failed (${res.status})`);
+    }
     const body = (await res.json()) as WorkspaceResponse;
     if (body.data && isPmSnapshot(body.data)) {
       applySnapshot(body.data);

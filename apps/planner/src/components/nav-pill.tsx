@@ -46,17 +46,21 @@ export function NavPill({ onOpenPanel }: { onOpenPanel: () => void }) {
     to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`);
 
   return (
-    <nav className="flex items-center gap-0.5 rounded-full border border-border-strong bg-surface-2/90 p-1 shadow-lg backdrop-blur">
+    // max-w-full + overflow-x-auto: the second row carries six destinations, and
+    // on a 360px phone that pill was a few pixels wider than the screen and
+    // scrolled the whole page sideways. Let the pill scroll within itself
+    // instead. Children are shrink-0 so they stay legible rather than squashing.
+    <nav className="flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-border-strong bg-surface-2/90 p-1 shadow-lg backdrop-blur [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <button
         type="button"
         onClick={onOpenPanel}
         aria-label="Open trackers"
         title="Trackers"
-        className="rounded-full p-2 text-muted transition-colors hover:bg-surface-3 hover:text-fg"
+        className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-surface-3 hover:text-fg"
       >
         <PanelLeft className="size-4" strokeWidth={1.75} />
       </button>
-      <span className="mx-0.5 h-5 w-px bg-border-strong" aria-hidden />
+      <span className="mx-0.5 h-5 w-px shrink-0 bg-border-strong" aria-hidden />
       {items.map((item) => {
         const Icon = ICONS[item.icon];
         const active = isActive(item.to);
@@ -65,7 +69,7 @@ export function NavPill({ onOpenPanel }: { onOpenPanel: () => void }) {
             key={item.to}
             to={item.to}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
               active
                 ? "bg-surface-3 text-primary"
                 : "text-muted hover:bg-surface-3 hover:text-fg",
@@ -76,13 +80,13 @@ export function NavPill({ onOpenPanel }: { onOpenPanel: () => void }) {
           </Link>
         );
       })}
-      <span className="mx-0.5 h-5 w-px bg-border-strong" aria-hidden />
+      <span className="mx-0.5 h-5 w-px shrink-0 bg-border-strong" aria-hidden />
       <Link
         to="/search"
         aria-label="Search"
         title="Search"
         className={cn(
-          "rounded-full p-2 transition-colors",
+          "shrink-0 rounded-full p-2 transition-colors",
           pathname === "/search"
             ? "bg-surface-3 text-primary"
             : "text-muted hover:bg-surface-3 hover:text-fg",
@@ -95,7 +99,7 @@ export function NavPill({ onOpenPanel }: { onOpenPanel: () => void }) {
         onClick={() => setShowSecondary((v) => !v)}
         aria-label={showSecondary ? "Show planner views" : "Show more views"}
         aria-expanded={showSecondary}
-        className="rounded-full p-2 text-muted transition-colors hover:bg-surface-3 hover:text-fg"
+        className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-surface-3 hover:text-fg"
       >
         <ChevronRight
           className={cn("size-4 transition-transform", showSecondary && "rotate-180")}

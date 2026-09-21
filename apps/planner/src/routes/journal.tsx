@@ -177,7 +177,7 @@ function JournalPage() {
       }
     >
       <div className="mx-auto max-w-4xl space-y-5 pb-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 [&>*]:min-w-0">
           <Stat icon={HardHat} label="Days logged" value={String(totals.days)} />
           <Stat icon={Timer} label="Man-hours" value={totals.manhours.toLocaleString()} />
           <Stat icon={Weight} label="Tons erected" value={totals.tons.toFixed(1)} />
@@ -194,7 +194,7 @@ function JournalPage() {
             const { day: dayNum, month, weekday } = formatLongDate(day.date);
             const isToday = day.date === DEMO_TODAY;
             return (
-              <div key={day.date} className="grid gap-4 py-5 sm:grid-cols-[9rem_minmax(0,1fr)]">
+              <div key={day.date} className="grid gap-4 py-5 sm:grid-cols-[9rem_minmax(0,1fr)] [&>*]:min-w-0">
                 <div className="sm:text-right">
                   <div className="flex items-baseline gap-2 sm:justify-end">
                     <span

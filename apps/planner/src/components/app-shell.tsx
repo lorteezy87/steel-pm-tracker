@@ -30,29 +30,39 @@ export function AppShell({
       <WorkspaceSyncBootstrap />
       <CommandPanel open={panelOpen} onClose={() => setPanelOpen(false)} />
 
-      <header className="sticky top-0 z-30 flex items-center gap-3 px-3 py-3 md:px-6">
+      {/* Below lg the pill needs the full width, so it takes its own row and
+          the title + actions sit under it. Cramming all three onto one line
+          squeezed the project filter until its label clipped to "…ojects". */}
+      <header className="sticky top-0 z-30 px-3 py-3 md:px-6">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-bg/80 backdrop-blur" />
-        <div className="hidden min-w-0 flex-1 lg:block">
-          <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
-          {subtitle ? <p className="truncate text-xs text-muted">{subtitle}</p> : null}
-        </div>
-        <div className="flex flex-1 justify-center lg:flex-none">
-          <NavPill onOpenPanel={() => setPanelOpen(true)} />
-        </div>
-        <div className="flex min-w-0 flex-1 shrink-0 items-center justify-end gap-2">
-          <div className="hidden xl:block">
-            <SyncStatusChip />
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+          <div className="flex justify-center lg:hidden">
+            <NavPill onOpenPanel={() => setPanelOpen(true)} />
           </div>
-          {actions}
+
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1 lg:flex-none lg:w-64 xl:w-80">
+              <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
+              {subtitle ? <p className="truncate text-xs text-muted">{subtitle}</p> : null}
+            </div>
+
+            <div className="hidden flex-1 justify-center lg:flex">
+              <NavPill onOpenPanel={() => setPanelOpen(true)} />
+            </div>
+
+            {/* Not shrink-0: the busiest pages pass three controls here
+                (show-completed toggle, project filter, add button), which on a
+                phone added up to more than the viewport and scrolled the page
+                sideways. Let them wrap instead. */}
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 lg:w-64 lg:flex-nowrap xl:w-80">
+              <div className="hidden xl:block">
+                <SyncStatusChip />
+              </div>
+              {actions}
+            </div>
+          </div>
         </div>
       </header>
-
-      {/* On narrow screens the pill takes the header, so the page title moves
-          inline above the content rather than disappearing entirely. */}
-      <div className="px-3 pt-1 lg:hidden md:px-6">
-        <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
-        {subtitle ? <p className="truncate text-xs text-muted">{subtitle}</p> : null}
-      </div>
 
       <main className="p-3 md:p-6">{children}</main>
     </div>

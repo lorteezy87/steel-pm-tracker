@@ -94,7 +94,7 @@ function PlannerPage() {
           ))}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 [&>*]:min-w-0">
           <button
             type="button"
             onClick={() => setMonthsBefore((n) => n + 6)}

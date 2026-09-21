@@ -96,7 +96,7 @@ function NotesPage() {
             No notes yet.
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid gap-3 sm:grid-cols-2 [&>li]:min-w-0">
             {rows.map((n) => (
               <li
                 key={n.id}

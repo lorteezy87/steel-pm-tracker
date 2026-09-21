@@ -135,9 +135,7 @@ function TimelinePage() {
           )}
         </div>
 
-        <div className="mt-6">
-          <DayStrip value={date} onChange={setDate} />
-        </div>
+        <DayStrip value={date} onChange={setDate} />
       </div>
     </AppShell>
   );

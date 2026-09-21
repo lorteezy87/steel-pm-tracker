@@ -75,8 +75,11 @@ function DailyPage() {
           </div>
         </header>
 
+        {/* min-w-0 on both tracks: a grid item defaults to min-width:auto, so a
+            long row (a block's title + badges, a past-due card) widened the
+            column past the viewport and scrolled the whole page sideways. */}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-          <section className="space-y-5">
+          <section className="min-w-0 space-y-5">
             {DAY_PERIODS.map((period) => {
               const rows = byPeriod(period);
               return (
@@ -104,7 +107,7 @@ function DailyPage() {
             })}
           </section>
 
-          <aside className="space-y-5">
+          <aside className="min-w-0 space-y-5">
             <PastDuePanel
               items={pastDue}
               date={date}
@@ -164,9 +167,7 @@ function DailyPage() {
           </aside>
         </div>
 
-        <div className="mt-6">
-          <DayStrip value={date} onChange={setDate} />
-        </div>
+        <DayStrip value={date} onChange={setDate} />
       </div>
     </AppShell>
   );
@@ -191,7 +192,7 @@ function BlockRow({ block }: { block: DayBlock }) {
           }
         />
       </div>
-      <Link to={event.href} className="min-w-0 flex-1">
+      <Link to={event.href} className="min-w-0 flex-1 overflow-hidden">
         <span className="flex flex-wrap items-center gap-2">
           <span
             className={cn(

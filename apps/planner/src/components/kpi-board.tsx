@@ -110,7 +110,7 @@ const CARDS: {
 
 export function KpiBoard({ kpi }: { kpi: KpiSnapshot }) {
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0">
       {CARDS.map((c) => {
         const Icon = c.icon;
         const warn = c.warn?.(kpi);

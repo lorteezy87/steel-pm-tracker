@@ -7,15 +7,17 @@ import {
   HardHat,
   Hammer,
   MessageSquareWarning,
+  Send,
   ShieldAlert,
   Truck,
+  UserCheck,
 } from "lucide-react";
 import type { KpiSnapshot } from "@/lib/pm/types";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const CARDS: {
-  key: keyof KpiSnapshot | "openRfisCombo" | "dueCombo";
+  key: keyof KpiSnapshot | "openRfisCombo" | "dueCombo" | "submittalCombo";
   label: string;
   icon: typeof Building2;
   href: string;
@@ -36,6 +38,22 @@ const CARDS: {
     href: "/rfis",
     format: (k) => `${k.openRfis} / ${k.overdueRfis}`,
     warn: (k) => k.overdueRfis > 0,
+  },
+  {
+    key: "submittalCombo",
+    label: "Open Submittals + Overdue",
+    icon: Send,
+    href: "/submittals",
+    format: (k) => `${k.openSubmittals} / ${k.overdueSubmittals}`,
+    warn: (k) => k.overdueSubmittals > 0,
+  },
+  {
+    key: "ballInCourtUs",
+    label: "Ball in Our Court",
+    icon: UserCheck,
+    href: "/lists",
+    format: (k) => String(k.ballInCourtUs),
+    warn: (k) => k.ballInCourtUs > 5,
   },
   {
     key: "fabPct",
